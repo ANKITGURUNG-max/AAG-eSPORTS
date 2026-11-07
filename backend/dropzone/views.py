@@ -233,9 +233,16 @@ class AdminPaymentViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
         payment = get_object_or_404(Payment, pk=pk)
+        registration = payment.registration
+        if registration.invitations.filter(status="pending").exists():
+            return Response({"detail": "Verification is waiting for all invited players to claim their team invitations."}, status=status.HTTP_400_BAD_REQUEST)
+        if not registration.team.members.exists():
+            return Response({"detail": "Verification is waiting for at least one confirmed team player."}, status=status.HTTP_400_BAD_REQUEST)
         verified = verify_payment(payment)
         if request.user.is_authenticated:
             AuditLog.objects.create(actor=request.user, action="verify_payment", entity="Payment", entity_id=str(pk))
+        if verified.status == "failed":
+            return Response({"detail": "No tournament slots are available. The payment was not activated.", "status": verified.status}, status=status.HTTP_409_CONFLICT)
         return Response({"status": verified.status, "slot": verified.registration.slot.number if verified.registration.slot else None})
     def list(self, request):
         payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("-created_at")
