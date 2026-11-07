@@ -21,9 +21,21 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   };
   let response: Response;
   try {
-    response = await request();
-  } catch {
-    throw new Error("Unable to reach the AAG eSports server. Make sure the backend is running.");
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        response = await request();
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt === 2) throw error;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    if (!response!) throw lastError;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Network request failed.";
+    throw new Error(`Could not connect to the AAG eSports server while requesting ${path}. ${detail}`);
   }
   if (response.status === 401 && await refreshAccessToken()) response = await request();
   if (!response.ok) {
