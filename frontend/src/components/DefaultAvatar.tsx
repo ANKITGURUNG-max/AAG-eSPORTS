@@ -5,7 +5,9 @@ function colorFor(value: string) {
 }
 
 export function DefaultAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
-  const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "?";
-  const sizes = { sm: "h-9 w-9 text-xs", md: "h-12 w-12 text-sm", lg: "h-14 w-14 text-xl" };
-  return <div aria-label={`${name || "Player"} default profile`} className={`grid shrink-0 place-items-center rounded-full font-bold text-[#101112] ${sizes[size]}`} style={{ backgroundColor: avatarColors[colorFor(name || "player")] }}>{initials}</div>;
+  const sizes = { sm: "h-9 w-9", md: "h-12 w-12", lg: "h-16 w-16" };
+  return <div aria-label={`${name || "Player"} default profile`} className={`default-avatar relative shrink-0 overflow-hidden rounded-full ${sizes[size]}`} style={{ backgroundColor: avatarColors[colorFor(name || "player")] }}>
+    <span className="absolute left-1/2 top-[18%] h-[34%] w-[34%] -translate-x-1/2 rounded-full bg-white/90"/>
+    <span className="absolute bottom-[-8%] left-1/2 h-[54%] w-[72%] -translate-x-1/2 rounded-[50%_50%_0_0] bg-white/90"/>
+  </div>;
 }
