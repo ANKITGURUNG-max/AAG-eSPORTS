@@ -1,0 +1,7 @@
+import { CalendarDays, Trophy } from "lucide-react";
+
+type Participation = { tournament_id: number; title: string; match_at: string; status: string; team: string; slot: number | null };
+
+export function ParticipationList({ entries }: { entries: Participation[] }) {
+  return <section className="mt-7"><div className="mb-3 flex items-center gap-2"><Trophy size={17} className="text-[#C6F36B]"/><h2 className="text-lg font-semibold">Your tournaments</h2></div>{entries.length ? <div className="space-y-3">{entries.map(entry => <article key={`${entry.tournament_id}-${entry.team}`} className="glass-panel rounded-2xl p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-medium">{entry.title}</h3><p className="mt-1 text-xs text-white/45">Team · {entry.team}</p></div><span className="shrink-0 rounded-full bg-[#C6F36B]/10 px-2 py-1 text-[10px] uppercase text-[#C6F36B]">{entry.status}</span></div><div className="mt-3 flex items-center justify-between text-xs text-white/50"><span className="flex items-center gap-1"><CalendarDays size={14}/>{new Date(entry.match_at).toLocaleDateString()}</span>{entry.slot ? <span className="font-medium text-[#C6F36B]">Slot {String(entry.slot).padStart(2, "0")}</span> : <span>Slot pending</span>}</div></article>)}</div> : <div className="rounded-2xl bg-[#191B1D] p-5 text-sm text-white/50">You have not participated in a tournament yet.</div>}</section>;
+}
