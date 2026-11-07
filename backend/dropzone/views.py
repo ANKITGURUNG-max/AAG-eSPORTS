@@ -182,9 +182,6 @@ def demo_payment(request, registration_id):
     payment = Payment.objects.select_related("registration__team").filter(registration_id=registration_id).first()
     if not payment or payment.registration.team.captain_id != request.user.id:
         return Response({"detail": "Payment not found."}, status=404)
-    payment.status = "verified"
-    payment.verified_at = timezone.now()
-    payment.save(update_fields=["status", "verified_at"])
     verified = verify_payment(payment)
     return Response({
         "status": verified.status,
