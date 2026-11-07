@@ -5,6 +5,7 @@ import uuid
 from django.core import signing
 from django.conf import settings
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -231,9 +232,10 @@ class AdminPaymentViewSet(viewsets.ViewSet):
     permission_classes = [IsAdmin]
     @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
-        payment = Payment.objects.get(pk=pk)
+        payment = get_object_or_404(Payment, pk=pk)
         verified = verify_payment(payment)
-        AuditLog.objects.create(actor=request.user, action="verify_payment", entity="Payment", entity_id=str(pk))
+        if request.user.is_authenticated:
+            AuditLog.objects.create(actor=request.user, action="verify_payment", entity="Payment", entity_id=str(pk))
         return Response({"status": verified.status, "slot": verified.registration.slot.number if verified.registration.slot else None})
     def list(self, request):
         payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("-created_at")
