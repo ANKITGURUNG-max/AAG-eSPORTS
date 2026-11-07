@@ -1,5 +1,5 @@
 const env = (import.meta as ImportMeta & { env: Record<string, string | undefined> }).env;
-const API = env.VITE_API_URL || (env.DEV ? "/api" : `${window.location.protocol}//${window.location.hostname}:8000/api`);
+const API = env.VITE_API_URL || (env.DEV ? "/api" : "https://aag-esports-backend.onrender.com/api");
 let refreshing: Promise<boolean> | null = null;
 async function refreshAccessToken() {
   const refresh = localStorage.getItem("dropzone_refresh");
