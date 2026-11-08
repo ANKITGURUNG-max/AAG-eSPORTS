@@ -66,6 +66,22 @@ class TournamentTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(team.members.count(), 2)
 
+    def test_roster_edit_ignores_empty_optional_player_slots(self):
+        team = Team.objects.create(name="Solo squad", captain=self.user)
+        TeamMember.objects.create(team=team, user=self.user, role="captain")
+        Registration.objects.create(tournament=self.tournament, team=team)
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.patch(
+            f"/api/teams/{team.pk}/roster/",
+            {"members": [{"player_id": self.user.player_id}, {"player_id": ""}, {"player_id": "  "}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(team.members.count(), 1)
+
     @override_settings(ADMIN_SESSION_MAX_AGE=3600)
     def test_admin_can_verify_pending_payment(self):
         team = Team.objects.create(name="Test squad", captain=self.user)

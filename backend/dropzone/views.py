@@ -157,8 +157,8 @@ class TeamViewSet(viewsets.ModelViewSet):
         registration = team.registrations.select_related("tournament").first()
         if not registration or timezone.now() >= registration.tournament.registration_deadline:
             return Response({"detail": "Team edits are closed for this tournament."}, status=status.HTTP_400_BAD_REQUEST)
-        members = request.data.get("members", [])
-        if not 1 <= len(members) <= 4 or len({member.get("player_id", "").upper() for member in members}) != len(members):
+        members = [member for member in request.data.get("members", []) if member.get("player_id", "").strip()]
+        if not 1 <= len(members) <= 4 or len({member["player_id"].strip().upper() for member in members}) != len(members):
             return Response({"detail": "A team must have between one and four unique players."}, status=status.HTTP_400_BAD_REQUEST)
         identifiers = [member["player_id"].strip().upper() for member in members]
         captain_account = request.user.game_accounts.filter(game="free_fire", uid__in=identifiers).exists()

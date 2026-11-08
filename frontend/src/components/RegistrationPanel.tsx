@@ -41,7 +41,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
   };
   const saveRoster = async (event: FormEvent) => {
     event.preventDefault(); setLoading(true); setError("");
-    try { await api(`teams/${submitted?.team_id}/roster/`, { method: "PATCH", body: JSON.stringify({ name, members: players.map(player_id => ({ player_id })) }) }); setEditing(false); }
+    try { await api(`teams/${submitted?.team_id}/roster/`, { method: "PATCH", body: JSON.stringify({ name, members: players.filter(Boolean).map(player_id => ({ player_id: player_id.trim() })) }) }); setEditing(false); }
     catch (exception) { setError(exception instanceof Error ? exception.message : "Could not update team."); }
     finally { setLoading(false); }
   };

@@ -100,14 +100,16 @@ class TeamCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     members = TeamMemberInputSerializer(many=True)
     def validate(self, attrs):
-        if not 1 <= len(attrs["members"]) <= 4 or len({m["player_id"] for m in attrs["members"]}) != len(attrs["members"]):
+        attrs["members"] = [member for member in attrs["members"] if member["player_id"].strip()]
+        identifiers = [member["player_id"].strip().upper() for member in attrs["members"]]
+        if not 1 <= len(identifiers) <= 4 or len(set(identifiers)) != len(identifiers):
             raise serializers.ValidationError("A team must have between one and four unique players.")
         if self.context["request"].user.player_id not in {m["player_id"] for m in attrs["members"]}:
             raise serializers.ValidationError("The captain must be included in the squad.")
         tournament = attrs["tournament"]
         if tournament.status not in ("upcoming",) or timezone.now() >= tournament.registration_deadline:
             raise serializers.ValidationError("Registration is closed for this tournament.")
-        identifiers = [m["player_id"] for m in attrs["members"]]
+        identifiers = [m["player_id"].strip() for m in attrs["members"]]
         users = list(User.objects.filter(player_id__in=identifiers))
         accounts = list(GameAccount.objects.filter(game="free_fire", uid__in=identifiers).select_related("user"))
         users_by_identifier = {user.player_id: user for user in users}
