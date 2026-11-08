@@ -95,12 +95,11 @@ class MeViewSet(viewsets.ViewSet):
         user.save(update_fields=["email", "phone", "first_name", "last_name"])
         uid = request.data.get("uid", "").strip()
         if uid:
-            duplicate = User.objects.filter(player_id=uid).exclude(pk=user.pk).exists()
+            duplicate = GameAccount.objects.filter(game="free_fire", uid=uid).exclude(user=user).exists()
             if duplicate:
                 return Response({"detail": "That Free Fire UID is already linked to another player."}, status=status.HTTP_400_BAD_REQUEST)
-            user.player_id = uid
         account, _ = GameAccount.objects.update_or_create(user=user, game="free_fire", defaults={"ign": request.data.get("ign", "").strip(), "uid": uid})
-        user.save(update_fields=["email", "phone", "first_name", "last_name", "player_id"])
+        user.save(update_fields=["email", "phone", "first_name", "last_name"])
         return Response(ProfileSerializer(PlayerProfile.objects.get(user=user)).data)
 
 class TeamViewSet(viewsets.ModelViewSet):
@@ -123,7 +122,9 @@ class TeamViewSet(viewsets.ModelViewSet):
                     TeamMember.objects.create(team=team, user=user, role="captain" if user == request.user else "member")
                 else:
                     TeamInvitation.objects.create(registration=registration, uid=identifier)
-            Payment.objects.create(registration=registration, provider_reference=f"MANUAL-{registration.pk}-{uuid.uuid4().hex[:8]}", amount=data["tournament"].entry_fee)
+            payment = Payment.objects.create(registration=registration, provider_reference=f"MANUAL-{registration.pk}-{uuid.uuid4().hex[:8]}", amount=data["tournament"].entry_fee)
+        if settings.PAYMENT_MODE == "demo" and not registration.invitations.filter(status="pending").exists():
+            verify_payment(payment)
         invites = registration.invitations.filter(status="pending")
         return Response({
             "registration_id": registration.id,
@@ -227,7 +228,9 @@ def claim_team_invitation(request, token):
         invitation.claimed_at = timezone.now()
         invitation.save(update_fields=["user", "status", "claimed_at"])
         payment = Payment.objects.filter(registration=invitation.registration).first()
-        if payment and payment.status == "verified":
+        if payment and settings.PAYMENT_MODE == "demo" and not invitation.registration.invitations.filter(status="pending").exists():
+            verify_payment(payment)
+        elif payment and payment.status == "verified":
             verify_payment(payment)
         return Response({"registration_id": invitation.registration_id, "status": "claimed"})
 
@@ -258,6 +261,11 @@ class AdminPaymentViewSet(viewsets.ViewSet):
         return Response({"status": verified.status, "slot": registration.slot.number if registration.slot else None})
     def list(self, request):
         payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("-created_at")
+        if settings.PAYMENT_MODE == "demo":
+            for payment in payments:
+                if payment.status == "pending" and not payment.registration.invitations.filter(status="pending").exists() and payment.registration.team.members.exists():
+                    verify_payment(payment)
+            payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("-created_at")
         return Response([{
             "id": payment.id,
             "reference": payment.provider_reference,
