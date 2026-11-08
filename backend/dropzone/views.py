@@ -244,7 +244,8 @@ class AdminPaymentViewSet(viewsets.ViewSet):
                 if not TeamMember.objects.filter(team_id=registration.team_id).exists():
                     return Response({"detail": "At least one confirmed team player is required before approval."}, status=status.HTTP_400_BAD_REQUEST)
                 tournament = Tournament.objects.select_for_update().get(pk=registration.tournament_id)
-                slot = TournamentSlot.objects.select_for_update().filter(tournament_id=tournament.pk, registration__isnull=True).order_by("number").first()
+                slots = TournamentSlot.objects.select_for_update().filter(tournament_id=tournament.pk).order_by("number")
+                slot = next((candidate for candidate in slots if not Registration.objects.filter(slot_id=candidate.pk).exists()), None)
                 if slot is None:
                     return Response({"detail": "No empty slots are available for this tournament."}, status=status.HTTP_409_CONFLICT)
                 payment.status = "verified"
