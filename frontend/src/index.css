@@ -7,6 +7,15 @@ html { background: #101112; }
 body { margin: 0; min-width: 320px; overflow-x: hidden; }
 button, input { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
+.skeleton {
+  background: linear-gradient(100deg, rgb(255 255 255 / 0.06) 20%, rgb(255 255 255 / 0.14) 40%, rgb(255 255 255 / 0.06) 60%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
 .tab-content { animation: tab-enter 420ms cubic-bezier(.22, 1, .36, 1) both; transform-origin: 50% 0; }
 @keyframes tab-enter {
   from { opacity: 0; filter: blur(7px); transform: translate3d(0, 14px, 0) scale(.985); }
@@ -28,6 +37,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tab-content { animation: none; }
+  .skeleton { animation: none; }
 }
 .auth-input { width: 100%; min-height: 3rem; border: 1px solid rgb(255 255 255 / 0.1); border-radius: 0.75rem; background: #101112; padding: 0.75rem 0.875rem; color: #f4f4f0; outline: none; }
 .auth-input::placeholder { color: rgb(255 255 255 / 0.35); }
