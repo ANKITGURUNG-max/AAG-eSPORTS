@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import override_settings
 from rest_framework.test import APIClient
 from django.core import signing
-from .models import Payment, Registration, Team, TeamMember, Tournament, TournamentSlot, GameAccount
+from .models import Payment, Registration, Team, TeamInvitation, TeamMember, Tournament, TournamentSlot, GameAccount
 from .views import verify_payment
 
 class TournamentTests(TestCase):
@@ -90,4 +90,21 @@ class TournamentTests(TestCase):
         payment.refresh_from_db()
         self.assertEqual(payment.status, "verified")
         registration.refresh_from_db()
+        self.assertEqual(registration.slot.number, 1)
+
+    @override_settings(ADMIN_SESSION_MAX_AGE=3600)
+    def test_admin_can_approve_team_with_unregistered_teammate(self):
+        team = Team.objects.create(name="Guest teammate squad", captain=self.user)
+        TeamMember.objects.create(team=team, user=self.user, role="captain")
+        registration = Registration.objects.create(tournament=self.tournament, team=team)
+        TeamInvitation.objects.create(registration=registration, uid="GUEST-200")
+        payment = Payment.objects.create(registration=registration, provider_reference="TEST-GUEST-1", amount=100)
+        client = APIClient()
+        client.credentials(HTTP_X_ADMIN_TOKEN=signing.dumps({"role": "organiser"}, salt="aag-admin"))
+
+        response = client.post(f"/api/admin/payments/{payment.pk}/verify/")
+
+        self.assertEqual(response.status_code, 200)
+        registration.refresh_from_db()
+        self.assertEqual(registration.status, "confirmed")
         self.assertEqual(registration.slot.number, 1)

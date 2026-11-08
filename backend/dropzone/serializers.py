@@ -99,8 +99,6 @@ class TeamCreateSerializer(serializers.Serializer):
             user = users_by_identifier.get(identifier)
             if not user:
                 continue
-            if not user.game_accounts.filter(game="free_fire").filter(ign__gt="", uid__gt="").exists():
-                raise serializers.ValidationError(f"{identifier} needs a complete Free Fire account.")
             if Registration.objects.filter(tournament=tournament, team__members__user=user, status__in=["pending", "confirmed"]).exists():
                 raise serializers.ValidationError(f"{identifier} is already registered for this tournament.")
         if captain.player_id not in identifiers and not captain.game_accounts.filter(game="free_fire", uid__in=identifiers).exists():

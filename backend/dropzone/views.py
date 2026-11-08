@@ -227,7 +227,7 @@ def verify_payment(payment):
         locked = Payment.objects.select_for_update().select_related("registration__tournament").get(pk=payment.pk)
         registration = Registration.objects.select_for_update().get(pk=locked.registration_id)
         if locked.status == "verified" and registration.status == "confirmed": return locked
-        if registration.invitations.filter(status="pending").exists() or not registration.team.members.exists():
+        if not registration.team.members.exists():
             return locked
         tournament = Tournament.objects.select_for_update().get(pk=registration.tournament_id)
         slot = TournamentSlot.objects.select_for_update().filter(tournament=tournament, registration__isnull=True).order_by("number").first()
@@ -268,8 +268,6 @@ class AdminPaymentViewSet(viewsets.ViewSet):
                     return Response({"detail": f"This payment cannot be approved because it is {payment.status}."}, status=status.HTTP_400_BAD_REQUEST)
                 if registration.status == "confirmed" and registration.slot_id:
                     return Response({"status": "verified", "slot": TournamentSlot.objects.get(pk=registration.slot_id).number})
-                if registration.invitations.filter(status="pending").exists():
-                    return Response({"detail": "All invited players must claim their invitations before approval."}, status=status.HTTP_400_BAD_REQUEST)
                 if not TeamMember.objects.filter(team_id=registration.team_id).exists():
                     return Response({"detail": "At least one confirmed team player is required before approval."}, status=status.HTTP_400_BAD_REQUEST)
                 tournament = Tournament.objects.select_for_update().get(pk=registration.tournament_id)
