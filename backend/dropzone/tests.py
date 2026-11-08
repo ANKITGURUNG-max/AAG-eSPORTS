@@ -95,6 +95,38 @@ class TournamentTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data[0]["members"], [self.user.player_id, "GUEST-300"])
 
+    def test_captain_can_request_cancellation(self):
+        team = Team.objects.create(name="Cancel squad", captain=self.user)
+        TeamMember.objects.create(team=team, user=self.user, role="captain")
+        registration = Registration.objects.create(tournament=self.tournament, team=team)
+        Payment.objects.create(registration=registration, provider_reference="TEST-CANCEL-1", amount=100)
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.post(f"/api/teams/{team.pk}/retract/")
+
+        self.assertEqual(response.status_code, 200)
+        registration.refresh_from_db()
+        self.assertTrue(registration.cancellation_requested)
+
+    @override_settings(ADMIN_SESSION_MAX_AGE=3600)
+    def test_admin_can_approve_cancellation_and_release_slot(self):
+        team = Team.objects.create(name="Release squad", captain=self.user)
+        TeamMember.objects.create(team=team, user=self.user, role="captain")
+        registration = Registration.objects.create(tournament=self.tournament, team=team, status="confirmed", slot=self.tournament.slots.get(number=1), cancellation_requested=True)
+        payment = Payment.objects.create(registration=registration, provider_reference="TEST-CANCEL-2", amount=100, status="verified")
+        client = APIClient()
+        client.credentials(HTTP_X_ADMIN_TOKEN=signing.dumps({"role": "organiser"}, salt="aag-admin"))
+
+        response = client.post(f"/api/admin/payments/{payment.pk}/cancel/")
+
+        self.assertEqual(response.status_code, 200)
+        registration.refresh_from_db()
+        payment.refresh_from_db()
+        self.assertEqual(registration.status, "cancelled")
+        self.assertIsNone(registration.slot_id)
+        self.assertEqual(payment.status, "cancelled")
+
     @override_settings(ADMIN_SESSION_MAX_AGE=3600)
     def test_admin_can_verify_pending_payment(self):
         team = Team.objects.create(name="Test squad", captain=self.user)

@@ -147,6 +147,7 @@ class TeamViewSet(viewsets.ModelViewSet):
                 "registration_id": registration.id if registration else None,
                 "payment_status": registration.payment.status if registration and hasattr(registration, "payment") else None,
                 "registration_status": registration.status if registration else None,
+                "cancellation_requested": registration.cancellation_requested if registration else False,
                 "slot": registration.slot.number if registration and registration.slot else None,
                 "invite_tokens": [{"uid": invite.uid, "token": str(invite.token)} for invite in invitations],
             })
@@ -194,6 +195,23 @@ class TeamViewSet(viewsets.ModelViewSet):
                 else:
                     TeamInvitation.objects.create(registration=registration, uid=identifier)
         return Response({"team_id": team.id, "members": identifiers, "pending_invites": registration.invitations.filter(status="pending").count()})
+
+    @action(detail=True, methods=["post"])
+    def retract(self, request, pk=None):
+        team = self.get_object()
+        if team.captain_id != request.user.id:
+            return Response({"detail": "Only the captain can request team cancellation."}, status=status.HTTP_403_FORBIDDEN)
+        registration = team.registrations.select_related("payment").first()
+        if not registration:
+            return Response({"detail": "Registration not found."}, status=status.HTTP_404_NOT_FOUND)
+        if registration.status in ("cancelled", "refunded"):
+            return Response({"detail": "This team has already been cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+        if registration.cancellation_requested:
+            return Response({"status": "requested"})
+        registration.cancellation_requested = True
+        registration.cancellation_requested_at = timezone.now()
+        registration.save(update_fields=["cancellation_requested", "cancellation_requested_at"])
+        return Response({"status": "requested"})
 
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
@@ -288,6 +306,20 @@ class AdminPaymentViewSet(viewsets.ViewSet):
             logger.exception("Payment approval database failure for payment %s", pk)
             return Response({"detail": "The server could not save this approval. Please refresh the dashboard and try again."}, status=status.HTTP_409_CONFLICT)
         return Response({"status": "verified", "slot": slot_number})
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        with transaction.atomic():
+            payment = Payment.objects.select_for_update().select_related("registration").get(pk=pk)
+            registration = Registration.objects.select_for_update().get(pk=payment.registration_id)
+            if not registration.cancellation_requested:
+                return Response({"detail": "This registration has no cancellation request."}, status=status.HTTP_400_BAD_REQUEST)
+            registration.slot = None
+            registration.status = "cancelled"
+            registration.cancellation_requested = False
+            registration.save(update_fields=["slot", "status", "cancellation_requested"])
+            payment.status = "cancelled"
+            payment.save(update_fields=["status"])
+        return Response({"status": "cancelled"})
     def list(self, request):
         payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("created_at")
         return Response([{
@@ -299,6 +331,7 @@ class AdminPaymentViewSet(viewsets.ViewSet):
             "tournament": payment.registration.tournament.title,
             "tournament_id": payment.registration.tournament_id,
             "pending_invites": list(payment.registration.invitations.filter(status="pending").values_list("uid", flat=True)),
+            "cancellation_requested": payment.registration.cancellation_requested,
             "registration_id": payment.registration_id,
             "created_at": payment.created_at,
         } for payment in payments])

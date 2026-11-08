@@ -82,6 +82,8 @@ class Registration(models.Model):
     team = models.ForeignKey(Team, on_delete=models.PROTECT, related_name="registrations")
     slot = models.OneToOneField(TournamentSlot, on_delete=models.PROTECT, related_name="registration", null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="pending")
+    cancellation_requested = models.BooleanField(default=False)
+    cancellation_requested_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
     class Meta:
         constraints = [models.UniqueConstraint(fields=["tournament", "team"], name="unique_team_tournament")]
