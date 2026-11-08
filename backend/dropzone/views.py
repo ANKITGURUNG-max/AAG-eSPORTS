@@ -234,6 +234,10 @@ class AdminPaymentViewSet(viewsets.ViewSet):
     def verify(self, request, pk=None):
         payment = get_object_or_404(Payment, pk=pk)
         registration = payment.registration
+        if payment.status in ("cancelled", "refunded", "failed"):
+            return Response({"detail": f"This payment cannot be verified because it is {payment.status}."}, status=status.HTTP_400_BAD_REQUEST)
+        if payment.status == "verified" and registration.status == "confirmed":
+            return Response({"status": payment.status, "slot": registration.slot.number if registration.slot else None})
         if registration.invitations.filter(status="pending").exists():
             return Response({"detail": "Verification is waiting for all invited players to claim their team invitations."}, status=status.HTTP_400_BAD_REQUEST)
         if not registration.team.members.exists():
