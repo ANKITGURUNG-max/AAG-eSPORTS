@@ -17,3 +17,12 @@ export function AdminPanelSkeleton() {
     <SkeletonBlock className="h-72 w-full rounded-2xl"/>
   </div>;
 }
+
+export function RegistrationPanelSkeleton() {
+  return <div aria-label="Loading team registration" className="space-y-4 rounded-2xl border border-[#C6F36B]/15 bg-[#C6F36B]/5 p-4 sm:p-5">
+    <div className="flex items-center gap-3"><SkeletonBlock className="h-10 w-10 rounded-full"/><div className="flex-1 space-y-2"><SkeletonBlock className="h-4 w-36"/><SkeletonBlock className="h-3 w-56 max-w-full"/></div></div>
+    <SkeletonBlock className="h-11 w-full"/>
+    <div className="space-y-2"><SkeletonBlock className="h-11 w-full"/><SkeletonBlock className="h-11 w-full"/><SkeletonBlock className="h-11 w-full"/><SkeletonBlock className="h-11 w-full"/></div>
+    <SkeletonBlock className="h-12 w-full"/>
+  </div>;
+}
