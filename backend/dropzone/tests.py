@@ -42,11 +42,14 @@ class TournamentTests(TestCase):
                 "first_name": "New",
                 "last_name": "Player",
                 "phone": "",
+                "ign": "NewPlayer",
+                "uid": "900",
             },
             format="json",
         )
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["username"], "newplayer")
+        self.assertTrue(GameAccount.objects.filter(uid="900", ign="NewPlayer", user__username="newplayer").exists())
 
     def test_roster_edit_rejects_player_on_another_team(self):
         User = get_user_model()
