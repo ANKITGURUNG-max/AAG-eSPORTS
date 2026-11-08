@@ -4,7 +4,7 @@ import json
 import uuid
 from django.core import signing
 from django.conf import settings
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, OperationalError, transaction
 import logging
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -231,27 +231,33 @@ class AdminPaymentViewSet(viewsets.ViewSet):
     permission_classes = [IsAdmin]
     @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
-        payment = get_object_or_404(Payment, pk=pk)
-        registration = payment.registration
-        if payment.status in ("cancelled", "refunded", "failed"):
-            return Response({"detail": f"This payment cannot be verified because it is {payment.status}."}, status=status.HTTP_400_BAD_REQUEST)
-        if payment.status == "verified" and registration.status == "confirmed":
-            return Response({"status": payment.status, "slot": registration.slot.number if registration.slot else None})
-        if registration.invitations.filter(status="pending").exists():
-            return Response({"detail": "Verification is waiting for all invited players to claim their team invitations."}, status=status.HTTP_400_BAD_REQUEST)
-        if not registration.team.members.exists():
-            return Response({"detail": "Verification is waiting for at least one confirmed team player."}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            verified = verify_payment(payment)
-        except IntegrityError:
-            logger.exception("Payment verification constraint failure for payment %s", payment.pk)
+            with transaction.atomic():
+                payment = Payment.objects.select_for_update().get(pk=pk)
+                registration = Registration.objects.select_for_update().select_related("team", "slot").get(pk=payment.registration_id)
+                if payment.status in ("cancelled", "refunded", "failed"):
+                    return Response({"detail": f"This payment cannot be approved because it is {payment.status}."}, status=status.HTTP_400_BAD_REQUEST)
+                if registration.status == "confirmed" and registration.slot_id:
+                    return Response({"status": "verified", "slot": registration.slot.number})
+                if registration.invitations.filter(status="pending").exists():
+                    return Response({"detail": "All invited players must claim their invitations before approval."}, status=status.HTTP_400_BAD_REQUEST)
+                if not TeamMember.objects.filter(team_id=registration.team_id).exists():
+                    return Response({"detail": "At least one confirmed team player is required before approval."}, status=status.HTTP_400_BAD_REQUEST)
+                tournament = Tournament.objects.select_for_update().get(pk=registration.tournament_id)
+                slot = TournamentSlot.objects.select_for_update().filter(tournament_id=tournament.pk, registration__isnull=True).order_by("number").first()
+                if slot is None:
+                    return Response({"detail": "No empty slots are available for this tournament."}, status=status.HTTP_409_CONFLICT)
+                payment.status = "verified"
+                payment.verified_at = timezone.now()
+                payment.save(update_fields=["status", "verified_at"])
+                registration.slot = slot
+                registration.status = "confirmed"
+                registration.save(update_fields=["slot", "status"])
+                slot_number = slot.number
+        except (IntegrityError, OperationalError):
+            logger.exception("Payment approval database failure for payment %s", pk)
             return Response({"detail": "This payment could not be verified because the registration changed. Refresh the dashboard and try again."}, status=status.HTTP_409_CONFLICT)
-        if request.user.is_authenticated:
-            AuditLog.objects.create(actor=request.user, action="verify_payment", entity="Payment", entity_id=str(pk))
-        if verified.status == "failed":
-            return Response({"detail": "No tournament slots are available. The payment was not activated.", "status": verified.status}, status=status.HTTP_409_CONFLICT)
-        registration = Registration.objects.select_related("slot").get(pk=registration.pk)
-        return Response({"status": verified.status, "slot": registration.slot.number if registration.slot else None})
+        return Response({"status": "verified", "slot": slot_number})
     def list(self, request):
         payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("created_at")
         return Response([{
