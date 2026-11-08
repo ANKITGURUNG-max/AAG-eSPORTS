@@ -41,7 +41,7 @@ export function AdminPanel() {
     Promise.all([
       api<Stats>("admin/stats/").then(setStats),
       api<Payment[]>("admin/payments/").then(setPayments),
-      api<Player[]>("admin/players").then(setPlayers),
+      api<Player[]>("admin/players").then(data => setPlayers(Array.from(new Map(data.map(player => [player.id, player])).values()))),
       api<Tournament[]>("admin/tournaments/").then(data => { setTournaments(data); if (!selectedTournament && data[0]) setSelectedTournament(String(data[0].id)); }),
     ]).catch(error => setLoadError(error instanceof Error ? error.message : "Could not load organiser data.")).finally(() => setLoading(false));
   };
