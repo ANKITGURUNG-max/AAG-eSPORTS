@@ -172,7 +172,7 @@ class TeamViewSet(viewsets.ModelViewSet):
                 tournament=registration.tournament,
                 team__members__user=user,
                 status__in=["pending", "confirmed"],
-            ).exclude(pk=registration.pk).exists():
+            ).exclude(team_id=team.pk).exists():
                 return Response({"detail": f"{identifier} is already registered for another team in this tournament."}, status=status.HTTP_400_BAD_REQUEST)
             if not user and TeamInvitation.objects.filter(
                 registration__tournament=registration.tournament,

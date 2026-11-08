@@ -39,6 +39,24 @@ class TournamentTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("already registered", response.data["detail"])
 
+    def test_roster_edit_allows_adding_new_player_to_current_team(self):
+        teammate = get_user_model().objects.create_user(username="teammate", password="password123")
+        GameAccount.objects.create(user=teammate, game="free_fire", ign="Teammate", uid="200")
+        team = Team.objects.create(name="Current squad", captain=self.user)
+        TeamMember.objects.create(team=team, user=self.user, role="captain")
+        Registration.objects.create(tournament=self.tournament, team=team)
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.patch(
+            f"/api/teams/{team.pk}/roster/",
+            {"members": [{"player_id": self.user.player_id}, {"player_id": teammate.player_id}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(team.members.count(), 2)
+
     @override_settings(ADMIN_SESSION_MAX_AGE=3600)
     def test_admin_can_verify_pending_payment(self):
         team = Team.objects.create(name="Test squad", captain=self.user)
