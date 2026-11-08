@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
@@ -16,6 +17,23 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ["username", "email", "password", "phone", "first_name", "last_name"]
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+class PlayerTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = "identifier"
+
+    def validate(self, attrs):
+        identifier = attrs["identifier"]
+        user = User.objects.filter(username__iexact=identifier).first()
+        if not user:
+            user = User.objects.filter(player_id__iexact=identifier).first()
+        if not user:
+            account = GameAccount.objects.filter(game="free_fire", uid__iexact=identifier).select_related("user").first()
+            user = account.user if account else None
+        if not user or not user.check_password(attrs["password"]):
+            raise serializers.ValidationError("Invalid username, Player ID, Free Fire UID, or password.")
+        self.user = user
+        refresh = self.get_token(user)
+        return {"refresh": str(refresh), "access": str(refresh.access_token)}
 
 class GameAccountSerializer(serializers.ModelSerializer):
     class Meta:

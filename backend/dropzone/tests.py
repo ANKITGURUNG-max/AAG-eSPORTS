@@ -17,6 +17,15 @@ class TournamentTests(TestCase):
         for n in range(1, 13): TournamentSlot.objects.create(tournament=self.tournament, number=n)
     def test_exact_slot_count(self): self.assertEqual(self.tournament.slots.count(), 12)
 
+    def test_player_can_login_with_player_id_or_free_fire_uid(self):
+        self.user.set_password("TestPassword123")
+        self.user.save(update_fields=["password"])
+        client = APIClient()
+        for identifier in (self.user.player_id, "100"):
+            response = client.post("/api/auth/login", {"identifier": identifier, "password": "TestPassword123"}, format="json")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("access", response.data)
+
     def test_roster_edit_rejects_player_on_another_team(self):
         User = get_user_model()
         other = User.objects.create_user(username="other", password="password123")
