@@ -26,6 +26,12 @@ class TournamentTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIn("access", response.data)
 
+    def test_player_can_login_with_legacy_username_field(self):
+        self.user.set_password("TestPassword123")
+        self.user.save(update_fields=["password"])
+        response = APIClient().post("/api/auth/login", {"username": "captain", "password": "TestPassword123"}, format="json")
+        self.assertEqual(response.status_code, 200)
+
     def test_roster_edit_rejects_player_on_another_team(self):
         User = get_user_model()
         other = User.objects.create_user(username="other", password="password123")

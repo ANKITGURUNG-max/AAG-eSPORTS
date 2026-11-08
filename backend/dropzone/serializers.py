@@ -20,9 +20,17 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class PlayerTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = "identifier"
+    identifier = serializers.CharField(required=False, write_only=True)
+    username = serializers.CharField(required=False, write_only=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["identifier"].required = False
 
     def validate(self, attrs):
-        identifier = attrs["identifier"]
+        identifier = attrs.get("identifier") or attrs.get("username")
+        if not identifier:
+            raise serializers.ValidationError("Enter your username, Player ID, or Free Fire UID.")
         user = User.objects.filter(username__iexact=identifier).first()
         if not user:
             user = User.objects.filter(player_id__iexact=identifier).first()
@@ -104,7 +112,7 @@ class TeamCreateSerializer(serializers.Serializer):
         identifiers = [member["player_id"].strip().upper() for member in attrs["members"]]
         if not 1 <= len(identifiers) <= 4 or len(set(identifiers)) != len(identifiers):
             raise serializers.ValidationError("A team must have between one and four unique players.")
-        if self.context["request"].user.player_id not in {m["player_id"] for m in attrs["members"]}:
+        if self.context["request"].user.player_id.upper() not in identifiers:
             raise serializers.ValidationError("The captain must be included in the squad.")
         tournament = attrs["tournament"]
         if tournament.status not in ("upcoming",) or timezone.now() >= tournament.registration_deadline:
@@ -121,6 +129,6 @@ class TeamCreateSerializer(serializers.Serializer):
                 continue
             if Registration.objects.filter(tournament=tournament, team__members__user=user, status__in=["pending", "confirmed"]).exists():
                 raise serializers.ValidationError(f"{identifier} is already registered for this tournament.")
-        if captain.player_id not in identifiers and not captain.game_accounts.filter(game="free_fire", uid__in=identifiers).exists():
+        if captain.player_id.upper() not in identifiers and not captain.game_accounts.filter(game="free_fire", uid__in=identifiers).exists():
             raise serializers.ValidationError("The captain's own Free Fire UID must be included.")
         return attrs

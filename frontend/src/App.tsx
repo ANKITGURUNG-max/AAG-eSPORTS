@@ -23,7 +23,8 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
     event.preventDefault(); setError(""); setLoading(true);
     try {
       if (mode === "register") await register(form);
-      const token = await login({ identifier: form.identifier || form.username, password: form.password });
+      const identifier = form.identifier || form.username;
+      const token = await login({ identifier, username: identifier, password: form.password });
       onAuthenticated(token);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to continue. Please try again.");
