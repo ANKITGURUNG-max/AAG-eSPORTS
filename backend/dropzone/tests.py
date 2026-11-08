@@ -17,6 +17,28 @@ class TournamentTests(TestCase):
         for n in range(1, 13): TournamentSlot.objects.create(tournament=self.tournament, number=n)
     def test_exact_slot_count(self): self.assertEqual(self.tournament.slots.count(), 12)
 
+    def test_roster_edit_rejects_player_on_another_team(self):
+        User = get_user_model()
+        other = User.objects.create_user(username="other", password="password123")
+        GameAccount.objects.create(user=other, game="free_fire", ign="Other", uid="200")
+        first_team = Team.objects.create(name="First squad", captain=self.user)
+        TeamMember.objects.create(team=first_team, user=self.user, role="captain")
+        first_registration = Registration.objects.create(tournament=self.tournament, team=first_team)
+        second_team = Team.objects.create(name="Second squad", captain=other)
+        TeamMember.objects.create(team=second_team, user=other, role="captain")
+        Registration.objects.create(tournament=self.tournament, team=second_team)
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.patch(
+            f"/api/teams/{first_team.pk}/roster/",
+            {"members": [{"player_id": self.user.player_id}, {"player_id": other.player_id}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("already registered", response.data["detail"])
+
     @override_settings(ADMIN_SESSION_MAX_AGE=3600)
     def test_admin_can_verify_pending_payment(self):
         team = Team.objects.create(name="Test squad", captain=self.user)

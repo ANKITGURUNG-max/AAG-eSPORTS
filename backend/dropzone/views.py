@@ -166,6 +166,20 @@ class TeamViewSet(viewsets.ModelViewSet):
             return Response({"detail": "The captain must remain on the team."}, status=status.HTTP_400_BAD_REQUEST)
         users_by_identifier = {user.player_id.upper(): user for user in User.objects.filter(player_id__in=identifiers)}
         users_by_identifier.update({account.uid.upper(): account.user for account in GameAccount.objects.select_related("user").filter(game="free_fire", uid__in=identifiers)})
+        for identifier in identifiers:
+            user = users_by_identifier.get(identifier)
+            if user and Registration.objects.filter(
+                tournament=registration.tournament,
+                team__members__user=user,
+                status__in=["pending", "confirmed"],
+            ).exclude(pk=registration.pk).exists():
+                return Response({"detail": f"{identifier} is already registered for another team in this tournament."}, status=status.HTTP_400_BAD_REQUEST)
+            if not user and TeamInvitation.objects.filter(
+                registration__tournament=registration.tournament,
+                uid__iexact=identifier,
+                status__in=["pending", "claimed"],
+            ).exclude(registration_id=registration.pk).exists():
+                return Response({"detail": f"{identifier} is already invited to another team in this tournament."}, status=status.HTTP_400_BAD_REQUEST)
         with transaction.atomic():
             team.name = request.data.get("name", team.name).strip() or team.name
             team.save(update_fields=["name"])
