@@ -234,11 +234,11 @@ class AdminPaymentViewSet(viewsets.ViewSet):
         try:
             with transaction.atomic():
                 payment = Payment.objects.select_for_update().get(pk=pk)
-                registration = Registration.objects.select_for_update().select_related("team", "slot").get(pk=payment.registration_id)
+                registration = Registration.objects.select_for_update().get(pk=payment.registration_id)
                 if payment.status in ("cancelled", "refunded", "failed"):
                     return Response({"detail": f"This payment cannot be approved because it is {payment.status}."}, status=status.HTTP_400_BAD_REQUEST)
                 if registration.status == "confirmed" and registration.slot_id:
-                    return Response({"status": "verified", "slot": registration.slot.number})
+                    return Response({"status": "verified", "slot": TournamentSlot.objects.get(pk=registration.slot_id).number})
                 if registration.invitations.filter(status="pending").exists():
                     return Response({"detail": "All invited players must claim their invitations before approval."}, status=status.HTTP_400_BAD_REQUEST)
                 if not TeamMember.objects.filter(team_id=registration.team_id).exists():
