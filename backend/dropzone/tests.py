@@ -36,7 +36,7 @@ class TournamentTests(TestCase):
         self.assertEqual(registration.slot.number, 1)
 
     @override_settings(ADMIN_SESSION_MAX_AGE=3600, PAYMENT_MODE="demo")
-    def test_demo_payment_is_auto_verified_from_admin_list(self):
+    def test_admin_approval_assigns_next_queue_slot(self):
         team = Team.objects.create(name="Demo squad", captain=self.user)
         TeamMember.objects.create(team=team, user=self.user, role="captain")
         registration = Registration.objects.create(tournament=self.tournament, team=team)
@@ -44,8 +44,10 @@ class TournamentTests(TestCase):
         client = APIClient()
         client.credentials(HTTP_X_ADMIN_TOKEN=signing.dumps({"role": "organiser"}, salt="aag-admin"))
 
-        response = client.get("/api/admin/payments/")
+        response = client.post(f"/api/admin/payments/{payment.pk}/verify/")
 
         self.assertEqual(response.status_code, 200)
         payment.refresh_from_db()
         self.assertEqual(payment.status, "verified")
+        registration.refresh_from_db()
+        self.assertEqual(registration.slot.number, 1)

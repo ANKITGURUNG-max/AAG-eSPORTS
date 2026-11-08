@@ -122,9 +122,7 @@ class TeamViewSet(viewsets.ModelViewSet):
                     TeamMember.objects.create(team=team, user=user, role="captain" if user == request.user else "member")
                 else:
                     TeamInvitation.objects.create(registration=registration, uid=identifier)
-            payment = Payment.objects.create(registration=registration, provider_reference=f"MANUAL-{registration.pk}-{uuid.uuid4().hex[:8]}", amount=data["tournament"].entry_fee)
-        if settings.PAYMENT_MODE == "demo" and not registration.invitations.filter(status="pending").exists():
-            verify_payment(payment)
+            Payment.objects.create(registration=registration, provider_reference=f"MANUAL-{registration.pk}-{uuid.uuid4().hex[:8]}", amount=data["tournament"].entry_fee)
         invites = registration.invitations.filter(status="pending")
         return Response({
             "registration_id": registration.id,
@@ -227,11 +225,6 @@ def claim_team_invitation(request, token):
         invitation.status = "claimed"
         invitation.claimed_at = timezone.now()
         invitation.save(update_fields=["user", "status", "claimed_at"])
-        payment = Payment.objects.filter(registration=invitation.registration).first()
-        if payment and settings.PAYMENT_MODE == "demo" and not invitation.registration.invitations.filter(status="pending").exists():
-            verify_payment(payment)
-        elif payment and payment.status == "verified":
-            verify_payment(payment)
         return Response({"registration_id": invitation.registration_id, "status": "claimed"})
 
 class AdminPaymentViewSet(viewsets.ViewSet):
@@ -260,12 +253,7 @@ class AdminPaymentViewSet(viewsets.ViewSet):
         registration = Registration.objects.select_related("slot").get(pk=registration.pk)
         return Response({"status": verified.status, "slot": registration.slot.number if registration.slot else None})
     def list(self, request):
-        payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("-created_at")
-        if settings.PAYMENT_MODE == "demo":
-            for payment in payments:
-                if payment.status == "pending" and not payment.registration.invitations.filter(status="pending").exists() and payment.registration.team.members.exists():
-                    verify_payment(payment)
-            payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("-created_at")
+        payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("created_at")
         return Response([{
             "id": payment.id,
             "reference": payment.provider_reference,
