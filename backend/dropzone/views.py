@@ -297,6 +297,8 @@ class AdminPaymentViewSet(viewsets.ViewSet):
             "amount": str(payment.amount),
             "team": payment.registration.team.name,
             "tournament": payment.registration.tournament.title,
+            "tournament_id": payment.registration.tournament_id,
+            "pending_invites": list(payment.registration.invitations.filter(status="pending").values_list("uid", flat=True)),
             "registration_id": payment.registration_id,
             "created_at": payment.created_at,
         } for payment in payments])
