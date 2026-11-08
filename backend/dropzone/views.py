@@ -136,19 +136,21 @@ class TeamViewSet(viewsets.ModelViewSet):
         tournament_id = request.query_params.get("tournament")
         if tournament_id:
             teams = teams.filter(registrations__tournament_id=tournament_id)
-        return Response([{
-            "id": team.id,
-            "name": team.name,
-            "members": [member.user.player_id for member in team.members.all()],
-            "registration_id": team.registrations.first().id if team.registrations.exists() else None,
-            "payment_status": team.registrations.first().payment.status if team.registrations.exists() else None,
-            "registration_status": team.registrations.first().status if team.registrations.exists() else None,
-            "slot": team.registrations.first().slot.number if team.registrations.exists() and team.registrations.first().slot else None,
-            "invite_tokens": [
-                {"uid": invite.uid, "token": str(invite.token)}
-                for invite in (team.registrations.first().invitations.filter(status="pending") if team.registrations.exists() else [])
-            ],
-        } for team in teams])
+        rows = []
+        for team in teams:
+            registration = team.registrations.first()
+            invitations = registration.invitations.filter(status="pending") if registration else []
+            rows.append({
+                "id": team.id,
+                "name": team.name,
+                "members": [member.user.player_id for member in team.members.all()] + [invite.uid for invite in invitations],
+                "registration_id": registration.id if registration else None,
+                "payment_status": registration.payment.status if registration and hasattr(registration, "payment") else None,
+                "registration_status": registration.status if registration else None,
+                "slot": registration.slot.number if registration and registration.slot else None,
+                "invite_tokens": [{"uid": invite.uid, "token": str(invite.token)} for invite in invitations],
+            })
+        return Response(rows)
     @action(detail=True, methods=["patch"])
     def roster(self, request, pk=None):
         team = self.get_object()

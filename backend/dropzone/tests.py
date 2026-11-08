@@ -82,6 +82,19 @@ class TournamentTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(team.members.count(), 1)
 
+    def test_team_list_includes_saved_unregistered_teammate_uids(self):
+        team = Team.objects.create(name="Saved squad", captain=self.user)
+        TeamMember.objects.create(team=team, user=self.user, role="captain")
+        registration = Registration.objects.create(tournament=self.tournament, team=team)
+        TeamInvitation.objects.create(registration=registration, uid="GUEST-300")
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.get(f"/api/teams/?tournament={self.tournament.pk}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]["members"], [self.user.player_id, "GUEST-300"])
+
     @override_settings(ADMIN_SESSION_MAX_AGE=3600)
     def test_admin_can_verify_pending_payment(self):
         team = Team.objects.create(name="Test squad", captain=self.user)
