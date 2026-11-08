@@ -51,5 +51,5 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return response.json();
 }
 export const login = (data: { identifier: string; username?: string; password: string }) => api<{ access: string; refresh: string }>("auth/login", { method: "POST", body: JSON.stringify(data) });
-export const register = (data: Record<string, string>) => api<{ player_id: string; username: string }>("auth/register", { method: "POST", body: JSON.stringify(data) });
+export const register = (data: Record<string, string>) => api<{ player_id: string; username: string; game_account: { ign: string; uid: string } }>("auth/register", { method: "POST", body: JSON.stringify(data) });
 export const adminLogin = (password: string) => api<{ token: string }>("admin/login", { method: "POST", body: JSON.stringify({ password }) });

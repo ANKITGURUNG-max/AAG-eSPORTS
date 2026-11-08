@@ -51,6 +51,29 @@ class TournamentTests(TestCase):
         self.assertEqual(response.data["username"], "newplayer")
         self.assertTrue(GameAccount.objects.filter(uid="900", ign="NewPlayer", user__username="newplayer").exists())
 
+    def test_signup_login_profile_contains_saved_game_account(self):
+        client = APIClient()
+        client.post(
+            "/api/auth/register",
+            {
+                "username": "profileplayer",
+                "email": "profileplayer@example.com",
+                "password": "TestPassword123",
+                "first_name": "Profile",
+                "last_name": "Player",
+                "phone": "",
+                "ign": "ProfileIGN",
+                "uid": "901",
+            },
+            format="json",
+        )
+        login = client.post("/api/auth/login", {"identifier": "profileplayer", "password": "TestPassword123"}, format="json")
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+        profile = client.get("/api/me/")
+        self.assertEqual(profile.status_code, 200)
+        self.assertEqual(profile.data["game_accounts"][0]["ign"], "ProfileIGN")
+        self.assertEqual(profile.data["game_accounts"][0]["uid"], "901")
+
     def test_roster_edit_rejects_player_on_another_team(self):
         User = get_user_model()
         other = User.objects.create_user(username="other", password="password123")

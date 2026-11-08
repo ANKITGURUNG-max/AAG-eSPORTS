@@ -23,6 +23,11 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
-    return Response({"player_id": user.player_id, "username": user.username}, status=201)
+    account = user.game_accounts.filter(game="free_fire").first()
+    return Response({
+        "player_id": user.player_id,
+        "username": user.username,
+        "game_account": {"ign": account.ign, "uid": account.uid} if account else None,
+    }, status=201)
 
 urlpatterns = [path("", include(router.urls)), path("auth/register", register), path("auth/login", TokenObtainPairView.as_view(serializer_class=PlayerTokenObtainPairSerializer)), path("auth/refresh", TokenRefreshView.as_view()), path("payments/webhook", payment_webhook), path("payments/demo/<int:registration_id>", demo_payment), path("teams/invitations/<str:token>/claim", claim_team_invitation), path("admin/login", admin_login), path("admin/players", admin_players), path("admin/players/<int:player_id>", admin_delete_player), path("admin/tournaments/<int:tournament_id>/roster", admin_tournament_roster), path("my/slots", my_tournament_slots), path("my/participation", my_participation)]
