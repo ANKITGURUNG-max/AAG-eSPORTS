@@ -39,11 +39,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
   if (response.status === 401 && await refreshAccessToken()) response = await request();
   if (!response.ok) {
-    const payload = await response.json().catch(() => null);
+    const raw = await response.text();
+    let payload: any = null;
+    try { payload = raw ? JSON.parse(raw) : null; } catch { payload = null; }
     const message = payload?.detail || Object.entries(payload || {}).map(([field, value]) => {
       const values = Array.isArray(value) ? value : [value];
       return `${field}: ${values.join(", ")}`;
-    }).join(" ") || `Request failed (${response.status})`;
+    }).join(" ") || (raw && !raw.trim().startsWith("<") ? raw.slice(0, 240) : `Request failed (${response.status})`);
     throw new Error(message);
   }
   return response.json();

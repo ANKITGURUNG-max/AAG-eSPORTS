@@ -4,7 +4,7 @@ import json
 import uuid
 from django.core import signing
 from django.conf import settings
-from django.db import IntegrityError, OperationalError, transaction
+from django.db import DatabaseError, IntegrityError, OperationalError, transaction
 import logging
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -254,9 +254,9 @@ class AdminPaymentViewSet(viewsets.ViewSet):
                 registration.status = "confirmed"
                 registration.save(update_fields=["slot", "status"])
                 slot_number = slot.number
-        except (IntegrityError, OperationalError):
+        except (IntegrityError, OperationalError, DatabaseError):
             logger.exception("Payment approval database failure for payment %s", pk)
-            return Response({"detail": "This payment could not be verified because the registration changed. Refresh the dashboard and try again."}, status=status.HTTP_409_CONFLICT)
+            return Response({"detail": "The server could not save this approval. Please refresh the dashboard and try again."}, status=status.HTTP_409_CONFLICT)
         return Response({"status": "verified", "slot": slot_number})
     def list(self, request):
         payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("created_at")
