@@ -4,7 +4,8 @@ import json
 import uuid
 from django.core import signing
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
+import logging
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
@@ -13,6 +14,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import *
 from .serializers import *
+
+logger = logging.getLogger(__name__)
 
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -242,12 +245,17 @@ class AdminPaymentViewSet(viewsets.ViewSet):
             return Response({"detail": "Verification is waiting for all invited players to claim their team invitations."}, status=status.HTTP_400_BAD_REQUEST)
         if not registration.team.members.exists():
             return Response({"detail": "Verification is waiting for at least one confirmed team player."}, status=status.HTTP_400_BAD_REQUEST)
-        verified = verify_payment(payment)
+        try:
+            verified = verify_payment(payment)
+        except IntegrityError:
+            logger.exception("Payment verification constraint failure for payment %s", payment.pk)
+            return Response({"detail": "This payment could not be verified because the registration changed. Refresh the dashboard and try again."}, status=status.HTTP_409_CONFLICT)
         if request.user.is_authenticated:
             AuditLog.objects.create(actor=request.user, action="verify_payment", entity="Payment", entity_id=str(pk))
         if verified.status == "failed":
             return Response({"detail": "No tournament slots are available. The payment was not activated.", "status": verified.status}, status=status.HTTP_409_CONFLICT)
-        return Response({"status": verified.status, "slot": verified.registration.slot.number if verified.registration.slot else None})
+        registration = Registration.objects.select_related("slot").get(pk=registration.pk)
+        return Response({"status": verified.status, "slot": registration.slot.number if registration.slot else None})
     def list(self, request):
         payments = Payment.objects.select_related("registration__team", "registration__tournament").order_by("-created_at")
         return Response([{
