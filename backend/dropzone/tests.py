@@ -32,6 +32,22 @@ class TournamentTests(TestCase):
         response = APIClient().post("/api/auth/login", {"username": "captain", "password": "TestPassword123"}, format="json")
         self.assertEqual(response.status_code, 200)
 
+    def test_first_time_registration_accepts_explicit_username(self):
+        response = APIClient().post(
+            "/api/auth/register",
+            {
+                "username": "newplayer",
+                "email": "newplayer@example.com",
+                "password": "TestPassword123",
+                "first_name": "New",
+                "last_name": "Player",
+                "phone": "",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["username"], "newplayer")
+
     def test_roster_edit_rejects_player_on_another_team(self):
         User = get_user_model()
         other = User.objects.create_user(username="other", password="password123")

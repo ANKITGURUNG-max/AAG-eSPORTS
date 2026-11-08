@@ -22,8 +22,15 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setLoading(true);
     try {
-      if (mode === "register") await register(form);
-      const identifier = form.identifier || form.username;
+      const created = mode === "register" ? await register({
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        phone: form.phone.trim(),
+      }) : null;
+      const identifier = created?.username || form.identifier.trim() || form.username.trim();
       const token = await login({ identifier, username: identifier, password: form.password });
       onAuthenticated(token);
     } catch (exception) {
