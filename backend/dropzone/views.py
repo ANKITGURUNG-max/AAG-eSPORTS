@@ -132,8 +132,23 @@ class TeamViewSet(viewsets.ModelViewSet):
             "invite_tokens": [{"uid": invite.uid, "token": str(invite.token)} for invite in invites],
         }, status=status.HTTP_201_CREATED)
     def list(self, request, *args, **kwargs):
-        teams = self.queryset.filter(captain=request.user)
-        return Response([{"id": t.id, "name": t.name, "members": [m.user.player_id for m in t.members.all()]} for t in teams])
+        teams = self.queryset.filter(captain=request.user).prefetch_related("members__user", "registrations__payment", "registrations__invitations")
+        tournament_id = request.query_params.get("tournament")
+        if tournament_id:
+            teams = teams.filter(registrations__tournament_id=tournament_id)
+        return Response([{
+            "id": team.id,
+            "name": team.name,
+            "members": [member.user.player_id for member in team.members.all()],
+            "registration_id": team.registrations.first().id if team.registrations.exists() else None,
+            "payment_status": team.registrations.first().payment.status if team.registrations.exists() else None,
+            "registration_status": team.registrations.first().status if team.registrations.exists() else None,
+            "slot": team.registrations.first().slot.number if team.registrations.exists() and team.registrations.first().slot else None,
+            "invite_tokens": [
+                {"uid": invite.uid, "token": str(invite.token)}
+                for invite in (team.registrations.first().invitations.filter(status="pending") if team.registrations.exists() else [])
+            ],
+        } for team in teams])
     @action(detail=True, methods=["patch"])
     def roster(self, request, pk=None):
         team = self.get_object()

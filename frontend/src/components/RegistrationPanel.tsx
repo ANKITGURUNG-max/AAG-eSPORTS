@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Check, Copy, CreditCard, ShieldCheck } from "lucide-react";
 import { api } from "../lib/api";
 import type { Tournament } from "./TournamentCard";
@@ -12,6 +12,19 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let active = true;
+    api<{ id: number; name: string; members: string[]; registration_id: number; payment_status: string; registration_status: string; slot: number | null; invite_tokens: { uid: string; token: string }[] }[]>(`teams/?tournament=${tournament.id}`)
+      .then(teams => {
+        const team = teams[0];
+        if (!active || !team) return;
+        setName(team.name);
+        setPlayers([team.members[0] || captain, team.members[1] || "", team.members[2] || "", team.members[3] || ""]);
+        setSubmitted({ registration_id: team.registration_id, team_id: team.id, payment_status: team.payment_status, invite_tokens: team.invite_tokens, demo_status: team.payment_status === "verified" ? team.payment_status : undefined, demo_slot: team.slot });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [captain, tournament.id]);
   const updatePlayer = (index: number) => (event: ChangeEvent<HTMLInputElement>) => setPlayers(players.map((player, current) => current === index ? event.target.value.toUpperCase() : player));
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setLoading(true); setError("");
