@@ -311,18 +311,55 @@ function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) 
 
 export default function App() {
   const [active, setActive] = useState("home");
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournaments, setTournaments] = useState<Tournament[]>(() => {
+    try {
+      const cached = localStorage.getItem("aag_cache_tournaments");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [liveTournaments, setLiveTournaments] = useState<Tournament[]>([]);
-  const [updates, setUpdates] = useState<any[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [updates, setUpdates] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem("aag_cache_updates");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem("aag_cache_profile");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [selected, setSelected] = useState<Tournament | null>(null);
   const [error, setError] = useState("");
   const [authenticated, setAuthenticated] = useState(Boolean(localStorage.getItem("dropzone_access")));
-  const [initialLoading, setInitialLoading] = useState(Boolean(localStorage.getItem("dropzone_access")));
-  const [mySlots, setMySlots] = useState<{ tournament: string; match_at: string; team: string; slot: number | null }[]>([]);
+  const [initialLoading, setInitialLoading] = useState(
+    Boolean(localStorage.getItem("dropzone_access")) && !localStorage.getItem("aag_cache_profile")
+  );
+  const [mySlots, setMySlots] = useState<{ tournament: string; match_at: string; team: string; slot: number | null }[]>(() => {
+    try {
+      const cached = localStorage.getItem("aag_cache_slots");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [participation, setParticipation] = useState<
     { tournament_id: number; title: string; match_at: string; status: string; team: string; slot: number | null }[]
-  >([]);
+  >(() => {
+    try {
+      const cached = localStorage.getItem("aag_cache_participation");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const inviteToken = window.location.pathname.startsWith("/invite/") ? window.location.pathname.split("/")[2] : "";
   const adminRoute = /^\/admin\/?$/.test(window.location.pathname);
@@ -333,20 +370,54 @@ export default function App() {
       return;
     }
     let mounted = true;
-    api<Tournament[]>("tournaments/?status=upcoming").then(setTournaments).catch(() => {});
-    api<Tournament[]>("tournaments/?status=ongoing").then(setLiveTournaments).catch(() => {});
-    api<any[]>("announcements/").then(setUpdates).catch(() => {});
+    api<Tournament[]>("tournaments/?status=upcoming")
+      .then(data => {
+        if (!mounted) return;
+        setTournaments(data);
+        try { localStorage.setItem("aag_cache_tournaments", JSON.stringify(data)); } catch {}
+      })
+      .catch(() => {});
+    api<Tournament[]>("tournaments/?status=ongoing")
+      .then(data => {
+        if (!mounted) return;
+        setLiveTournaments(data);
+      })
+      .catch(() => {});
+    api<any[]>("announcements/")
+      .then(data => {
+        if (!mounted) return;
+        setUpdates(data);
+        try { localStorage.setItem("aag_cache_updates", JSON.stringify(data)); } catch {}
+      })
+      .catch(() => {});
     api<UserProfile>("me/")
-      .then(setProfile)
+      .then(data => {
+        if (!mounted) return;
+        setProfile(data);
+        try { localStorage.setItem("aag_cache_profile", JSON.stringify(data)); } catch {}
+      })
       .catch(() => {
         localStorage.removeItem("dropzone_access");
+        localStorage.removeItem("aag_cache_profile");
         setAuthenticated(false);
       })
       .finally(() => {
         if (mounted) setInitialLoading(false);
       });
-    api<typeof mySlots>("my/slots").then(setMySlots).catch(() => {});
-    api<typeof participation>("my/participation").then(setParticipation).catch(() => {});
+    api<typeof mySlots>("my/slots")
+      .then(data => {
+        if (!mounted) return;
+        setMySlots(data);
+        try { localStorage.setItem("aag_cache_slots", JSON.stringify(data)); } catch {}
+      })
+      .catch(() => {});
+    api<typeof participation>("my/participation")
+      .then(data => {
+        if (!mounted) return;
+        setParticipation(data);
+        try { localStorage.setItem("aag_cache_participation", JSON.stringify(data)); } catch {}
+      })
+      .catch(() => {});
     if (inviteToken)
       api(`teams/invitations/${inviteToken}/claim`, { method: "POST" })
         .then(() => setError("Invite claimed successfully. You are now part of the squad."))
@@ -359,6 +430,11 @@ export default function App() {
   const signOut = () => {
     localStorage.removeItem("dropzone_access");
     localStorage.removeItem("dropzone_refresh");
+    localStorage.removeItem("aag_cache_profile");
+    localStorage.removeItem("aag_cache_tournaments");
+    localStorage.removeItem("aag_cache_updates");
+    localStorage.removeItem("aag_cache_slots");
+    localStorage.removeItem("aag_cache_participation");
     setProfile(null);
     setAuthenticated(false);
     setActive("home");
@@ -443,7 +519,7 @@ export default function App() {
               AAG <span className="bg-black text-[#C6F36B] px-1.5">eSports</span>
             </p>
             <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-black/70">
-              Free Fire Arena
+              AAG eSports
             </p>
           </div>
           <BottomNav active={active} onChange={setActive} />
@@ -454,7 +530,7 @@ export default function App() {
           {/* Header */}
           <header className="mb-6 flex min-w-0 items-center justify-between gap-3 border-b-2 border-black dark:border-white/20 pb-4 sm:mb-8">
             <div className="min-w-0">
-              <span className="neo-badge">FREE FIRE ARENA</span>
+              <span className="neo-badge">AAG eSports</span>
               <h1 className="mt-2 truncate text-2xl font-black uppercase tracking-tight text-black dark:text-white sm:text-3xl">
                 {active === "home" ? "Ready to drop?" : active.toUpperCase()}
               </h1>

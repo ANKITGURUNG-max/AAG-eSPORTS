@@ -17,6 +17,11 @@ router.register("admin/stats", AdminStatsViewSet, basename="admin-stats")
 router.register("admin/tournaments", AdminTournamentViewSet, basename="admin-tournament")
 router.register("admin/announcements", AdminAnnouncementViewSet, basename="admin-announcement")
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def health_check(request):
+    return Response({"status": "ok", "service": "AAG eSports API"})
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def register(request):
@@ -30,4 +35,19 @@ def register(request):
         "game_account": {"ign": account.ign, "uid": account.uid} if account else None,
     }, status=201)
 
-urlpatterns = [path("", include(router.urls)), path("auth/register", register), path("auth/login", TokenObtainPairView.as_view(serializer_class=PlayerTokenObtainPairSerializer)), path("auth/refresh", TokenRefreshView.as_view()), path("payments/webhook", payment_webhook), path("payments/demo/<int:registration_id>", demo_payment), path("teams/invitations/<str:token>/claim", claim_team_invitation), path("admin/login", admin_login), path("admin/players", admin_players), path("admin/players/<int:player_id>", admin_delete_player), path("admin/tournaments/<int:tournament_id>/roster", admin_tournament_roster), path("my/slots", my_tournament_slots), path("my/participation", my_participation)]
+urlpatterns = [
+    path("health", health_check),
+    path("", include(router.urls)),
+    path("auth/register", register),
+    path("auth/login", TokenObtainPairView.as_view(serializer_class=PlayerTokenObtainPairSerializer)),
+    path("auth/refresh", TokenRefreshView.as_view()),
+    path("payments/webhook", payment_webhook),
+    path("payments/demo/<int:registration_id>", demo_payment),
+    path("teams/invitations/<str:token>/claim", claim_team_invitation),
+    path("admin/login", admin_login),
+    path("admin/players", admin_players),
+    path("admin/players/<int:player_id>", admin_delete_player),
+    path("admin/tournaments/<int:tournament_id>/roster", admin_tournament_roster),
+    path("my/slots", my_tournament_slots),
+    path("my/participation", my_participation),
+]
