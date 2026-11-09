@@ -75,18 +75,18 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
               AAG <span className="bg-black text-[#C6F36B] px-1.5">eSports</span>
             </span>
           </div>
-          <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-black">
+          <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-black dark:text-white/80">
             Free Fire Squad Tournament Hub
           </p>
         </div>
 
         {/* Card */}
-        <div className="neo p-6 sm:p-8 shadow-[6px_6px_0px_#000000]">
-          <div className="mb-6 border-b-2 border-black pb-4">
-            <h1 className="text-2xl font-black uppercase tracking-tight text-black sm:text-3xl">
+        <div className="neo p-6 sm:p-8 shadow-[6px_6px_0px_#000000] dark:shadow-[6px_6px_0px_#c6f36b]">
+          <div className="mb-6 border-b-2 border-black dark:border-white/20 pb-4">
+            <h1 className="text-2xl font-black uppercase tracking-tight text-black dark:text-white sm:text-3xl">
               {mode === "register" ? "Create Player Account" : "Player Sign In"}
             </h1>
-            <p className="mt-1 text-xs font-bold text-black/60">
+            <p className="mt-1 text-xs font-bold text-black/60 dark:text-white/70">
               {mode === "register"
                 ? "Join tournaments, form squads, and get your custom room slots."
                 : "Sign in with your username, Player ID, or Free Fire UID."}
@@ -97,7 +97,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
             {mode === "register" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">First Name *</label>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">First Name *</label>
                   <input
                     required
                     value={form.first_name}
@@ -107,7 +107,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Last Name</label>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">Last Name</label>
                   <input
                     value={form.last_name}
                     onChange={update("last_name")}
@@ -119,7 +119,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
             )}
 
             <div>
-              <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+              <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                 {mode === "register" ? "Username *" : "Username / Player ID / Free Fire UID *"}
               </label>
               <input
@@ -136,7 +136,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
               <>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Email *</label>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">Email *</label>
                     <input
                       required
                       type="email"
@@ -147,7 +147,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Phone</label>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">Phone</label>
                     <input
                       value={form.phone}
                       onChange={update("phone")}
@@ -157,8 +157,8 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
                   </div>
                 </div>
 
-                <div className="border-t-2 border-black pt-3">
-                  <p className="mb-2 text-xs font-black uppercase tracking-wider text-black flex items-center gap-1.5">
+                <div className="border-t-2 border-black dark:border-white/20 pt-3">
+                  <p className="mb-2 text-xs font-black uppercase tracking-wider text-black dark:text-white flex items-center gap-1.5">
                     <Flame size={15} strokeWidth={2.5} className="text-[#FF4757]" /> Free Fire In-Game Account
                   </p>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -187,7 +187,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
             )}
 
             <div>
-              <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Password *</label>
+              <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">Password *</label>
               <div className="relative">
                 <input
                   required
@@ -203,7 +203,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
                   type="button"
                   onClick={() => setShowPassword(value => !value)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute inset-y-0 right-0 grid w-12 place-items-center text-black/70 hover:text-black"
+                  className="absolute inset-y-0 right-0 grid w-12 place-items-center text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white"
                 >
                   {showPassword ? <EyeOff size={18} strokeWidth={2.5} /> : <Eye size={18} strokeWidth={2.5} />}
                 </button>
@@ -221,7 +221,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
             </button>
           </form>
 
-          <div className="mt-6 border-t-2 border-black pt-4 text-center">
+          <div className="mt-6 border-t-2 border-black dark:border-white/20 pt-4 text-center">
             <button
               type="button"
               onClick={() => {
@@ -229,7 +229,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
                 setError("");
                 setShowPassword(false);
               }}
-              className="text-xs font-black uppercase tracking-wider text-black hover:underline"
+              className="text-xs font-black uppercase tracking-wider text-black dark:text-white hover:underline"
             >
               {mode === "register" ? "Already have an account? Sign in →" : "New player? Create an account →"}
             </button>
@@ -267,10 +267,10 @@ function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) 
         <div className="mb-4 flex justify-end">
           <ThemeToggle />
         </div>
-        <form onSubmit={submit} className="neo w-full p-6 sm:p-8 shadow-[6px_6px_0px_#000000]">
+        <form onSubmit={submit} className="neo w-full p-6 sm:p-8 shadow-[6px_6px_0px_#000000] dark:shadow-[6px_6px_0px_#c6f36b]">
         <span className="neo-badge">ORGANISER VERIFICATION</span>
-        <h1 className="mt-3 text-2xl font-black uppercase tracking-tight text-black">Admin Access</h1>
-        <p className="mt-1 text-xs font-bold text-black/60">
+        <h1 className="mt-3 text-2xl font-black uppercase tracking-tight text-black dark:text-white">Admin Access</h1>
+        <p className="mt-1 text-xs font-bold text-black/60 dark:text-white/70">
           Enter master organiser password to manage matches, allocations, and registrations.
         </p>
 
@@ -288,7 +288,7 @@ function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) 
             type="button"
             onClick={() => setShowPassword(value => !value)}
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="absolute inset-y-0 right-0 grid w-12 place-items-center text-black/70 hover:text-black"
+            className="absolute inset-y-0 right-0 grid w-12 place-items-center text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white"
           >
             {showPassword ? <EyeOff size={18} strokeWidth={2.5} /> : <Eye size={18} strokeWidth={2.5} />}
           </button>
@@ -403,13 +403,7 @@ export default function App() {
 
   // Route 3: Initial loading skeleton
   if (initialLoading) {
-    return (
-      <main className="min-h-screen bg-[#F4EFE6] dark:bg-[#0D0E12] px-4 py-8 text-black dark:text-white">
-        <div className="mx-auto max-w-2xl">
-          <PlayerAppSkeleton />
-        </div>
-      </main>
-    );
+    return <PlayerAppSkeleton />;
   }
 
   // Route 4: Admin mode from within player app
@@ -444,7 +438,7 @@ export default function App() {
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 pb-24 pt-4 sm:px-6 sm:pt-6 md:grid md:grid-cols-[240px_minmax(0,1fr)] md:pb-8">
         {/* Desktop Sidebar */}
         <aside className="hidden md:block">
-          <div className="mb-8 border-[3px] border-black bg-[#C6F36B] p-4 shadow-[4px_4px_0px_#000000]">
+          <div className="mb-8 border-[3px] border-black bg-[#C6F36B] p-4 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#c6f36b]">
             <p className="text-xl font-black tracking-tight text-black">
               AAG <span className="bg-black text-[#C6F36B] px-1.5">eSports</span>
             </p>
@@ -458,7 +452,7 @@ export default function App() {
         {/* Main Content Area */}
         <main key={active} className="tab-content min-w-0">
           {/* Header */}
-          <header className="mb-6 flex min-w-0 items-center justify-between gap-3 border-b-2 border-black pb-4 sm:mb-8">
+          <header className="mb-6 flex min-w-0 items-center justify-between gap-3 border-b-2 border-black dark:border-white/20 pb-4 sm:mb-8">
             <div className="min-w-0">
               <span className="neo-badge">FREE FIRE ARENA</span>
               <h1 className="mt-2 truncate text-2xl font-black uppercase tracking-tight text-black dark:text-white sm:text-3xl">
@@ -488,7 +482,7 @@ export default function App() {
           {active === "home" && (
             <>
               {/* Neo Brutalist Hero Banner */}
-              <section className="neo mb-6 border-[3px] border-black bg-[#C6F36B] p-6 text-black shadow-[6px_6px_0px_#000000] sm:p-8">
+              <section className="neo mb-6 border-[3px] border-black bg-[#C6F36B] p-6 text-black shadow-[6px_6px_0px_#000000] dark:shadow-[6px_6px_0px_#c6f36b] sm:p-8">
                 <div className="mb-6 flex items-center justify-between">
                   <span className="border-2 border-black bg-black px-3 py-1 text-xs font-black uppercase tracking-widest text-[#C6F36B]">
                     SEASON 01 TOURNAMENTS
@@ -512,8 +506,8 @@ export default function App() {
               {/* Next upcoming tournaments */}
               <div className="mb-4 mt-8 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Trophy size={20} strokeWidth={2.5} />
-                  <h2 className="text-xl font-black uppercase tracking-tight text-black">Upcoming Tournaments</h2>
+                  <Trophy size={20} strokeWidth={2.5} className="text-black dark:text-[#C6F36B]" />
+                  <h2 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">Upcoming Tournaments</h2>
                 </div>
                 <button
                   type="button"
@@ -534,7 +528,7 @@ export default function App() {
                   />
                 ))}
                 {!tournaments.length && (
-                  <div className="neo p-8 text-center text-sm font-black uppercase text-black/50">
+                  <div className="neo p-8 text-center text-sm font-black uppercase text-black/60 dark:text-white/60">
                     No upcoming tournaments scheduled yet.
                   </div>
                 )}
@@ -554,7 +548,7 @@ export default function App() {
                 />
               ))}
               {!tournaments.length && (
-                <div className="neo p-8 text-center text-sm font-black uppercase text-black/50">
+                <div className="neo p-8 text-center text-sm font-black uppercase text-black/60 dark:text-white/60">
                   No tournaments available.
                 </div>
               )}
@@ -570,12 +564,12 @@ export default function App() {
               {updates.map(update => (
                 <article key={update.id} className="neo p-5">
                   <span className="neo-badge">{update.kind}</span>
-                  <h3 className="mt-2 text-lg font-black uppercase tracking-tight text-black">{update.title}</h3>
-                  <p className="mt-2 text-sm font-semibold leading-relaxed text-black/75">{update.body}</p>
+                  <h3 className="mt-2 text-lg font-black uppercase tracking-tight text-black dark:text-white">{update.title}</h3>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-black/75 dark:text-white/80">{update.body}</p>
                 </article>
               ))}
               {!updates.length && (
-                <div className="neo p-8 text-center text-sm font-black uppercase text-black/50">
+                <div className="neo p-8 text-center text-sm font-black uppercase text-black/60 dark:text-white/60">
                   No community updates posted yet.
                 </div>
               )}

@@ -82,12 +82,12 @@ function PaymentApprovals({
 }) {
   return (
     <section className="neo p-5 sm:p-6">
-      <div className="mb-5 flex items-center justify-between border-b-2 border-black pb-4">
+      <div className="mb-5 flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-4">
         <div className="flex items-center gap-2.5">
           <CreditCard size={20} strokeWidth={2.5} />
           <div>
-            <h3 className="font-black uppercase tracking-tight text-black sm:text-lg">Payment & Squad Approvals</h3>
-            <p className="text-xs font-bold text-black/60">
+            <h3 className="font-black uppercase tracking-tight text-black dark:text-white sm:text-lg">Payment & Squad Approvals</h3>
+            <p className="text-xs font-bold text-black/60 dark:text-white/70">
               {activeTab === "overview" ? "Approvals for currently selected tournament." : "Verify fee payments and allocate slots."}
             </p>
           </div>
@@ -99,19 +99,19 @@ function PaymentApprovals({
 
       <div className="space-y-3">
         {payments.map(payment => (
-          <div key={payment.id} className="border-2 border-black bg-white p-4 shadow-[3px_3px_0px_#000000]">
+          <div key={payment.id} className="border-2 border-black dark:border-white/20 bg-white dark:bg-[#1a1c23] p-4 shadow-[3px_3px_0px_#000000] dark:shadow-[3px_3px_0px_#c6f36b]">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-black text-base text-black">{payment.team}</span>
+                  <span className="font-black text-base text-black dark:text-white">{payment.team}</span>
                   {payment.cancellation_requested && (
                     <span className="border border-black bg-[#FF4757] px-2 py-0.5 text-[10px] font-black uppercase text-white">
                       Cancel Requested
                     </span>
                   )}
                 </div>
-                <p className="mt-1 truncate text-xs font-bold text-black/60">
-                  {payment.tournament} · Ref: <span className="font-mono text-black">{payment.reference}</span>
+                <p className="mt-1 truncate text-xs font-bold text-black/60 dark:text-white/70">
+                  {payment.tournament} · Ref: <span className="font-mono text-black dark:text-[#C6F36B]">{payment.reference}</span>
                 </p>
               </div>
 
@@ -123,7 +123,7 @@ function PaymentApprovals({
                     ? "bg-[#C6F36B] text-black"
                     : payment.status === "pending"
                     ? "bg-[#FFE600] text-black"
-                    : "bg-white text-black/70"
+                    : "bg-white dark:bg-[#121316] text-black/70 dark:text-white/70"
                 }`}
               >
                 {payment.status}
@@ -136,8 +136,8 @@ function PaymentApprovals({
               </div>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t-2 border-black/10 pt-3">
-              <span className="text-sm font-black text-black">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t-2 border-black/10 dark:border-white/10 pt-3">
+              <span className="text-sm font-black text-black dark:text-white">
                 {Number(payment.amount) === 0 ? "FREE ENTRY" : `ENTRY: ₹${payment.amount}`}
               </span>
 
@@ -169,7 +169,7 @@ function PaymentApprovals({
         ))}
 
         {!payments.length && (
-          <div className="border-2 border-black bg-[#F4EFE6] p-8 text-center text-sm font-black uppercase text-black/60">
+          <div className="border-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#121316] p-8 text-center text-sm font-black uppercase text-black/60 dark:text-white/60">
             {activeTab === "overview" ? "No approvals required for this tournament." : "All payments and registrations up to date."}
           </div>
         )}
@@ -345,7 +345,7 @@ export function AdminPanel() {
           </div>
           <div>
             <span className="neo-badge">PROTECTED ORGANISER ACCESS</span>
-            <h2 className="mt-1 text-xl font-black uppercase tracking-tight text-black sm:text-2xl">
+            <h2 className="mt-1 text-xl font-black uppercase tracking-tight text-black dark:text-white sm:text-2xl">
               AAG eSports Dashboard
             </h2>
           </div>
@@ -372,14 +372,14 @@ export function AdminPanel() {
           {stats && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                ["Total Players", stats.users, "bg-white"],
-                ["Active Tournaments", stats.active_tournaments, "bg-[#C6F36B]"],
-                ["Registrations", stats.registrations, "bg-white"],
-                ["Pending Payments", stats.pending_payments, "bg-[#FFE600]"],
-              ].map(([label, value, bg]) => (
-                <div key={label as string} className={`border-[3px] border-black ${bg} p-4 shadow-[4px_4px_0px_#000000]`}>
-                  <p className="text-xs font-black uppercase tracking-wider text-black/70">{label}</p>
-                  <p className="mt-2 text-3xl font-black text-black">{value}</p>
+                ["Total Players", stats.users, "bg-white dark:bg-[#1a1c23] text-black dark:text-white", "text-black/70 dark:text-white/70"],
+                ["Active Tournaments", stats.active_tournaments, "bg-[#C6F36B] text-black", "text-black/70"],
+                ["Registrations", stats.registrations, "bg-white dark:bg-[#1a1c23] text-black dark:text-white", "text-black/70 dark:text-white/70"],
+                ["Pending Payments", stats.pending_payments, "bg-[#FFE600] text-black", "text-black/70"],
+              ].map(([label, value, cardClass, labelClass]) => (
+                <div key={label as string} className={`border-[3px] border-black dark:border-white/20 p-4 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#c6f36b] ${cardClass}`}>
+                  <p className={`text-xs font-black uppercase tracking-wider ${labelClass}`}>{label}</p>
+                  <p className="mt-2 text-3xl font-black">{value}</p>
                 </div>
               ))}
             </div>
@@ -393,7 +393,7 @@ export function AdminPanel() {
               className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all ${
                 activeTab === "overview"
                   ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
-                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+                  : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
               }`}
             >
               Overview & Roster
@@ -404,7 +404,7 @@ export function AdminPanel() {
               className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all ${
                 activeTab === "manage"
                   ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
-                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+                  : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
               }`}
             >
               Manage Tournaments
@@ -415,7 +415,7 @@ export function AdminPanel() {
               className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "payments"
                   ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
-                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+                  : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
               }`}
             >
               <CreditCard size={15} strokeWidth={2.5} />
@@ -432,7 +432,7 @@ export function AdminPanel() {
               className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "players"
                   ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
-                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+                  : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
               }`}
             >
               <Users size={15} strokeWidth={2.5} />
@@ -444,10 +444,10 @@ export function AdminPanel() {
           {activeTab === "manage" && (
             <>
               <section className="neo p-5 sm:p-6">
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-4">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-black dark:border-white/20 pb-4">
                   <div className="flex items-center gap-2">
                     <Video size={20} strokeWidth={2.5} />
-                    <h3 className="text-xl font-black uppercase tracking-tight text-black">Tournament Editor</h3>
+                    <h3 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">Tournament Editor</h3>
                   </div>
                   <button
                     type="button"
@@ -469,12 +469,12 @@ export function AdminPanel() {
                       onClick={() => setSelectedTournament(String(tournament.id))}
                       className={`border-2 p-3 text-left transition-all ${
                         String(tournament.id) === selectedTournament
-                          ? "border-black bg-[#C6F36B] shadow-[3px_3px_0px_#000000]"
-                          : "border-black bg-white hover:bg-[#F4EFE6]"
+                          ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                          : "border-black dark:border-white/20 bg-white dark:bg-[#121316] text-black dark:text-white hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
                       }`}
                     >
-                      <p className="font-black text-black">{tournament.title}</p>
-                      <p className="mt-1 text-xs font-bold text-black/60 uppercase">
+                      <p className="font-black">{tournament.title}</p>
+                      <p className="mt-1 text-xs font-bold text-black/60 dark:text-white/60 uppercase">
                         Status: {tournament.status} · {new Date(tournament.match_at).toLocaleDateString()}
                       </p>
                     </button>
@@ -484,7 +484,7 @@ export function AdminPanel() {
                 <form onSubmit={saveTournament} className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                         Tournament Title *
                       </label>
                       <input
@@ -495,7 +495,7 @@ export function AdminPanel() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                         URL Slug *
                       </label>
                       <input
@@ -509,7 +509,7 @@ export function AdminPanel() {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                         Match Date & Time *
                       </label>
                       <input
@@ -521,7 +521,7 @@ export function AdminPanel() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                         Registration Deadline *
                       </label>
                       <input
@@ -536,7 +536,7 @@ export function AdminPanel() {
 
                   <div className="grid gap-4 sm:grid-cols-3">
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                         Entry Fee (₹) *
                       </label>
                       <input
@@ -548,7 +548,7 @@ export function AdminPanel() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                         Prize Pool (₹) *
                       </label>
                       <input
@@ -560,7 +560,7 @@ export function AdminPanel() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                         Tournament Status *
                       </label>
                       <select
@@ -578,7 +578,7 @@ export function AdminPanel() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                       Tournament Description *
                     </label>
                     <textarea
@@ -590,7 +590,7 @@ export function AdminPanel() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                       Match Rules & Requirements
                     </label>
                     <textarea
@@ -601,7 +601,7 @@ export function AdminPanel() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                       YouTube Live Stream URL (Optional)
                     </label>
                     <input
@@ -624,14 +624,14 @@ export function AdminPanel() {
 
               {/* Announcement Box */}
               <section className="neo p-5 sm:p-6">
-                <div className="mb-4 flex items-center gap-2 border-b-2 border-black pb-3">
+                <div className="mb-4 flex items-center gap-2 border-b-2 border-black dark:border-white/20 pb-3">
                   <Megaphone size={20} strokeWidth={2.5} />
-                  <h3 className="text-xl font-black uppercase tracking-tight text-black">Publish News & Feed Update</h3>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">Publish News & Feed Update</h3>
                 </div>
                 <form onSubmit={publishAnnouncement} className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Category</label>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">Category</label>
                       <select
                         value={announcement.kind}
                         onChange={event => setAnnouncement(current => ({ ...current, kind: event.target.value }))}
@@ -644,7 +644,7 @@ export function AdminPanel() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Headline *</label>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">Headline *</label>
                       <input
                         required
                         value={announcement.title}
@@ -655,7 +655,7 @@ export function AdminPanel() {
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Details *</label>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black dark:text-white">Details *</label>
                     <textarea
                       required
                       value={announcement.body}
@@ -678,10 +678,10 @@ export function AdminPanel() {
           {/* TAB: OVERVIEW */}
           {activeTab === "overview" && (
             <section className="neo p-5 sm:p-6">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-4">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-black dark:border-white/20 pb-4">
                 <div>
-                  <h3 className="text-xl font-black uppercase tracking-tight text-black">12-Slot Custom Room Roster</h3>
-                  <p className="text-xs font-bold text-black/60">
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">12-Slot Custom Room Roster</h3>
+                  <p className="text-xs font-bold text-black/60 dark:text-white/70">
                     Review assigned custom room slots, team captains, and players.
                   </p>
                 </div>
@@ -696,11 +696,11 @@ export function AdminPanel() {
                     <span className="truncate">
                       {tournaments.find(tournament => String(tournament.id) === selectedTournament)?.title || "Select Tournament"}
                     </span>
-                    <span className="text-black">▼</span>
+                    <span className="text-black dark:text-[#C6F36B]">▼</span>
                   </button>
 
                   {rosterMenuOpen && (
-                    <div className="neo absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 max-h-60 overflow-y-auto p-1 shadow-[5px_5px_0px_#000000]">
+                    <div className="neo absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 max-h-60 overflow-y-auto p-1 shadow-[5px_5px_0px_#000000] dark:shadow-[5px_5px_0px_#c6f36b]">
                       {tournaments.map(tournament => (
                         <button
                           type="button"
@@ -712,11 +712,11 @@ export function AdminPanel() {
                           className={`w-full p-2.5 text-left text-xs font-black uppercase transition-colors ${
                             String(tournament.id) === selectedTournament
                               ? "bg-[#C6F36B] text-black"
-                              : "text-black hover:bg-[#F4EFE6]"
+                              : "text-black dark:text-white hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
                           }`}
                         >
                           <span className="block truncate">{tournament.title}</span>
-                          <span className="mt-0.5 block text-[10px] text-black/60">
+                          <span className="mt-0.5 block text-[10px] text-black/60 dark:text-white/60">
                             {tournament.status} · {new Date(tournament.match_at).toLocaleDateString()}
                           </span>
                         </button>
@@ -731,8 +731,8 @@ export function AdminPanel() {
                 {roster.map(slot => (
                   <article
                     key={slot.slot}
-                    className={`border-2 border-black p-4 shadow-[2px_2px_0px_#000000] ${
-                      slot.status === "confirmed" ? "bg-[#F7FFF0]" : "bg-white"
+                    className={`border-2 border-black dark:border-white/20 p-4 shadow-[2px_2px_0px_#000000] dark:shadow-[2px_2px_0px_#c6f36b] ${
+                      slot.status === "confirmed" ? "bg-[#F7FFF0] dark:bg-[#1a2e1d]" : "bg-white dark:bg-[#121316]"
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -741,25 +741,25 @@ export function AdminPanel() {
                           {String(slot.slot).padStart(2, "0")}
                         </span>
                         <div>
-                          <p className="font-black text-base text-black">{slot.team || "SLOT VACANT"}</p>
-                          <p className="text-xs font-bold uppercase text-black/60">
+                          <p className="font-black text-base text-black dark:text-white">{slot.team || "SLOT VACANT"}</p>
+                          <p className="text-xs font-bold uppercase text-black/60 dark:text-white/70">
                             Status: {slot.status} {slot.payment_status ? `· Fee: ${slot.payment_status}` : ""}
                           </p>
                         </div>
                       </div>
 
                       {slot.captain && (
-                        <span className="border border-black bg-white px-2.5 py-1 text-xs font-black text-black">
+                        <span className="border border-black dark:border-white/20 bg-white dark:bg-[#1a1c23] px-2.5 py-1 text-xs font-black text-black dark:text-white">
                           Captain: {slot.captain}
                         </span>
                       )}
                     </div>
 
                     {slot.players.length > 0 && (
-                      <div className="mt-3 overflow-x-auto border-t-2 border-black/10 pt-3">
+                      <div className="mt-3 overflow-x-auto border-t-2 border-black/10 dark:border-white/10 pt-3">
                         <table className="w-full min-w-[500px] text-left text-xs font-bold">
                           <thead>
-                            <tr className="border-b-2 border-black text-black/70">
+                            <tr className="border-b-2 border-black dark:border-white/20 text-black/70 dark:text-white/70">
                               <th className="pb-1.5 uppercase">Player ID</th>
                               <th className="pb-1.5 uppercase">Free Fire IGN</th>
                               <th className="pb-1.5 uppercase">Player UID</th>
@@ -768,12 +768,12 @@ export function AdminPanel() {
                           </thead>
                           <tbody>
                             {slot.players.map(player => (
-                              <tr key={`${slot.slot}-${player.player_id}`} className="border-b border-black/10">
-                                <td className="py-2 font-mono font-black text-black">{player.player_id}</td>
-                                <td className="py-2 text-black">{player.ign || "—"}</td>
-                                <td className="py-2 font-mono text-black">{player.uid}</td>
+                              <tr key={`${slot.slot}-${player.player_id}`} className="border-b border-black/10 dark:border-white/10">
+                                <td className="py-2 font-mono font-black text-black dark:text-[#C6F36B]">{player.player_id}</td>
+                                <td className="py-2 text-black dark:text-white">{player.ign || "—"}</td>
+                                <td className="py-2 font-mono text-black dark:text-white">{player.uid}</td>
                                 <td className="py-2 uppercase">
-                                  <span className={player.role === "captain" ? "bg-[#C6F36B] px-1.5 py-0.5 border border-black text-[10px]" : "text-black/60"}>
+                                  <span className={player.role === "captain" ? "bg-[#C6F36B] px-1.5 py-0.5 border border-black text-black text-[10px]" : "text-black/60 dark:text-white/60"}>
                                     {player.role}
                                   </span>
                                 </td>
@@ -803,10 +803,10 @@ export function AdminPanel() {
           {/* TAB: PLAYERS */}
           {activeTab === "players" && (
             <section className="neo p-5 sm:p-6">
-              <div className="mb-5 flex items-center justify-between border-b-2 border-black pb-4">
+              <div className="mb-5 flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-4">
                 <div className="flex items-center gap-2">
                   <Users size={20} strokeWidth={2.5} />
-                  <h3 className="text-xl font-black uppercase tracking-tight text-black">Player Directory</h3>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">Player Directory</h3>
                 </div>
                 <span className="neo-badge">{players.length} Registered Players</span>
               </div>
@@ -814,7 +814,7 @@ export function AdminPanel() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px] text-left text-xs font-bold">
                   <thead>
-                    <tr className="border-b-2 border-black bg-[#F4EFE6] text-black">
+                    <tr className="border-b-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#121316] text-black dark:text-white">
                       <th className="p-3 uppercase">Player ID</th>
                       <th className="p-3 uppercase">Username</th>
                       <th className="p-3 uppercase">Free Fire IGN</th>
@@ -826,17 +826,17 @@ export function AdminPanel() {
                   </thead>
                   <tbody>
                     {players.map(player => (
-                      <tr key={player.id} className="border-b border-black/10 hover:bg-[#F9F6F0]">
-                        <td className="p-3 font-mono font-black text-black">{player.player_id}</td>
-                        <td className="p-3 font-black text-black">
+                      <tr key={player.id} className="border-b border-black/10 dark:border-white/10 hover:bg-[#F9F6F0] dark:hover:bg-[#252836]/60">
+                        <td className="p-3 font-mono font-black text-black dark:text-[#C6F36B]">{player.player_id}</td>
+                        <td className="p-3 font-black text-black dark:text-white">
                           {player.name || player.username}
-                          {player.name && <span className="block text-[11px] font-normal text-black/60">@{player.username}</span>}
+                          {player.name && <span className="block text-[11px] font-normal text-black/60 dark:text-white/60">@{player.username}</span>}
                         </td>
-                        <td className="p-3 text-black">{player.game_account?.ign || "—"}</td>
-                        <td className="p-3 font-mono text-black">{player.game_account?.uid || "—"}</td>
-                        <td className="p-3 text-black/70">
+                        <td className="p-3 text-black dark:text-white">{player.game_account?.ign || "—"}</td>
+                        <td className="p-3 font-mono text-black dark:text-white">{player.game_account?.uid || "—"}</td>
+                        <td className="p-3 text-black/70 dark:text-white/70">
                           {player.email || "—"}
-                          {player.phone && <span className="block text-[11px] text-black/50">{player.phone}</span>}
+                          {player.phone && <span className="block text-[11px] text-black/50 dark:text-white/50">{player.phone}</span>}
                         </td>
                         <td className="p-3">
                           <span
@@ -863,7 +863,7 @@ export function AdminPanel() {
               </div>
 
               {!players.length && (
-                <div className="p-8 text-center text-sm font-black uppercase text-black/50">
+                <div className="p-8 text-center text-sm font-black uppercase text-black/50 dark:text-white/50">
                   No registered player records found.
                 </div>
               )}

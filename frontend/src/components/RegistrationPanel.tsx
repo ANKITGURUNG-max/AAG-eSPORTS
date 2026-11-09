@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Check, CreditCard, ShieldCheck, AlertCircle, Edit3, XCircle } from "lucide-react";
+import { Check, CreditCard, ShieldCheck, Edit3, XCircle } from "lucide-react";
 import { api } from "../lib/api";
 import type { Tournament } from "./TournamentCard";
 import type { UserProfile } from "./ProfilePanel";
@@ -158,16 +158,16 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
       <div className="neo p-6 sm:p-8">
         <Toast message={error} tone={error.startsWith("Could not") ? "error" : "success"} />
         <div className="mb-4 inline-flex items-center gap-3 border-[3px] border-black bg-[#C6F36B] px-4 py-2 font-black shadow-[3px_3px_0px_#000000]">
-          <Check size={22} strokeWidth={3} />
-          <h2 className="text-xl font-black uppercase tracking-tight">Team Registered</h2>
+          <Check size={22} strokeWidth={3} className="text-black" />
+          <h2 className="text-xl font-black uppercase tracking-tight text-black">Team Registered</h2>
         </div>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-black/75">
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-black/75 dark:text-white/80">
           Your squad is in the system. An admin will review and verify your entry. You can update your team name or roster before the registration deadline.
         </p>
 
         {editing ? (
-          <form onSubmit={saveRoster} className="mt-6 space-y-3 border-2 border-black bg-[#F4EFE6] p-4">
-            <label className="block text-xs font-black uppercase tracking-wider text-black">
+          <form onSubmit={saveRoster} className="mt-6 space-y-3 border-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#121316] p-4">
+            <label className="block text-xs font-black uppercase tracking-wider text-black dark:text-white">
               Squad Name
               <input
                 required
@@ -178,7 +178,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
               />
             </label>
             <div className="space-y-2 pt-2">
-              <label className="block text-xs font-black uppercase tracking-wider text-black">
+              <label className="block text-xs font-black uppercase tracking-wider text-black dark:text-white">
                 Roster (1–4 Free Fire UIDs)
               </label>
               {players.map((player, index) => (
@@ -238,13 +238,13 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
         )}
 
         {/* Payment / Approval Box */}
-        <div className="mt-6 border-[3px] border-black bg-white p-5 shadow-[4px_4px_0px_#000000]">
+        <div className="mt-6 border-[3px] border-black dark:border-white/20 bg-white dark:bg-[#121316] p-5 shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#c6f36b]">
           {Number(tournament.entry_fee) === 0 ? (
             <>
-              <div className="flex items-center gap-2 text-sm font-black uppercase text-black">
+              <div className="flex items-center gap-2 text-sm font-black uppercase text-black dark:text-white">
                 <ShieldCheck size={20} strokeWidth={2.5} className="text-[#00B894]" /> Free Registration
               </div>
-              <p className="mt-2 text-xs font-semibold leading-relaxed text-black/70">
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-black/70 dark:text-white/70">
                 No payment is required. The tournament organiser will approve your squad and allocate your custom room slot.
               </p>
               {submitted.demo_slot ? (
@@ -259,13 +259,13 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
             </>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b-2 border-black pb-3">
-                <span className="flex items-center gap-2 text-sm font-black uppercase text-black">
+              <div className="flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-3">
+                <span className="flex items-center gap-2 text-sm font-black uppercase text-black dark:text-white">
                   <CreditCard size={18} strokeWidth={2.5} /> Entry Fee: ₹{tournament.entry_fee}
                 </span>
                 <span className="neo-badge">Registration #{submitted.registration_id}</span>
               </div>
-              <p className="mt-3 text-xs font-semibold leading-relaxed text-black/70">
+              <p className="mt-3 text-xs font-semibold leading-relaxed text-black/70 dark:text-white/70">
                 Demo payment simulator (for development and test tournaments). Real UPI credentials are never requested.
               </p>
               {submitted.demo_status ? (
@@ -292,21 +292,21 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
 
   return (
     <form onSubmit={submit} className="neo p-6 sm:p-8">
-      <div className="mb-6 flex items-center justify-between border-b-2 border-black pb-4">
+      <div className="mb-6 flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-4">
         <div>
-          <h2 className="text-2xl font-black uppercase tracking-tight text-black">Register Your Squad</h2>
-          <p className="mt-1 text-xs font-bold text-black/60">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-black dark:text-white">Register Your Squad</h2>
+          <p className="mt-1 text-xs font-bold text-black/60 dark:text-white/60">
             {Number(tournament.entry_fee) === 0 ? "FREE ENTRY" : `₹${tournament.entry_fee} ENTRY FEE`} · 1–4 Free Fire Players
           </p>
         </div>
-        <div className="hidden border-2 border-black bg-[#C6F36B] px-3 py-1 text-xs font-black sm:block">
+        <div className="hidden border-2 border-black bg-[#C6F36B] px-3 py-1 text-xs font-black text-black sm:block">
           STEP 01/02
         </div>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black">
+          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
             Squad / Team Name *
           </label>
           <input
@@ -319,13 +319,13 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black">
+          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
             Team Members (Your Player ID + Teammate UIDs)
           </label>
           <div className="space-y-2.5">
             {players.map((player, index) => (
               <div key={index} className="flex items-center gap-2">
-                <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black bg-[#F4EFE6] text-xs font-black text-black">
+                <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#252836] text-xs font-black text-black dark:text-white">
                   {index + 1}
                 </span>
                 <input
@@ -334,12 +334,12 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
                   value={player}
                   onChange={updatePlayer(index)}
                   placeholder={index === 0 ? "Your Player ID (Captain)" : `Teammate ${index} Free Fire UID (Optional)`}
-                  className={`neo-input ${index === 0 ? "bg-[#F4EFE6] font-black cursor-not-allowed" : ""}`}
+                  className={`neo-input ${index === 0 ? "bg-[#F4EFE6] dark:bg-[#252836] font-black cursor-not-allowed" : ""}`}
                 />
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs font-semibold text-black/60">
+          <p className="mt-2 text-xs font-semibold text-black/60 dark:text-white/60">
             Teammates only need to provide their Free Fire UID; they do not need to register on the site.
           </p>
         </div>

@@ -33,10 +33,10 @@ export function TournamentDetails({
           <div className="mb-2 inline-flex items-center gap-2 border-2 border-black bg-[#C6F36B] px-3 py-1 text-xs font-black uppercase tracking-widest text-black shadow-[2px_2px_0px_#000000]">
             Free Fire Squad Tournament
           </div>
-          <h1 className="mt-3 break-words text-3xl font-black tracking-tight text-black sm:text-4xl">
+          <h1 className="mt-3 break-words text-3xl font-black tracking-tight text-black dark:text-white sm:text-4xl">
             {tournament.title}
           </h1>
-          <p className="mt-4 text-sm font-semibold leading-relaxed text-black/80 sm:text-base">
+          <p className="mt-4 text-sm font-semibold leading-relaxed text-black/80 dark:text-white/80 sm:text-base">
             {tournament.description}
           </p>
 
@@ -45,9 +45,9 @@ export function TournamentDetails({
               <p className="text-xs font-black uppercase tracking-wider text-black/70">Prize pool</p>
               <p className="mt-1 text-2xl font-black text-black">₹{tournament.prize_pool}</p>
             </div>
-            <div className="border-[3px] border-black bg-white p-4 shadow-[3px_3px_0px_#000000]">
-              <p className="text-xs font-black uppercase tracking-wider text-black/70">Entry fee</p>
-              <p className="mt-1 text-2xl font-black text-black">
+            <div className="border-[3px] border-black bg-white dark:bg-[#1a1c23] p-4 shadow-[3px_3px_0px_#000000] dark:shadow-[3px_3px_0px_#c6f36b]">
+              <p className="text-xs font-black uppercase tracking-wider text-black/70 dark:text-white/70">Entry fee</p>
+              <p className="mt-1 text-2xl font-black text-black dark:text-white">
                 {Number(tournament.entry_fee) === 0 ? "FREE" : `₹${tournament.entry_fee}`}
               </p>
             </div>

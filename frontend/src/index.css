@@ -275,17 +275,15 @@ select.neo-input option, select.auth-input option {
 
 /* Skeletons */
 .skeleton {
-  background: linear-gradient(100deg, #ffffff 20%, #e2ded5 40%, #ffffff 60%);
+  background: linear-gradient(100deg, #e4dfd5 20%, #f4efe6 40%, #e4dfd5 60%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
-  border: 3px solid #000000;
-  box-shadow: 3px 3px 0px 0px #000000;
+  border: 1.5px solid rgba(0, 0, 0, 0.35);
 }
 
 .dark .skeleton {
-  background: linear-gradient(100deg, #1a1c23 20%, #292d38 40%, #1a1c23 60%);
-  border: 3px solid #000000;
-  box-shadow: 3px 3px 0px 0px #c6f36b;
+  background: linear-gradient(100deg, #1f222b 20%, #2e3341 40%, #1f222b 60%);
+  border: 1.5px solid rgba(198, 243, 107, 0.25);
 }
 
 @keyframes skeleton-shimmer {
