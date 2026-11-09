@@ -187,6 +187,7 @@ export function AdminPanel() {
   const [roster, setRoster] = useState<RosterSlot[]>([]);
   const [tournamentForm, setTournamentForm] = useState(emptyTournament);
   const [announcement, setAnnouncement] = useState({ kind: "tournament", title: "", body: "", published: true });
+  const [announcementsList, setAnnouncementsList] = useState<{ id: number; kind: string; title: string; body: string; created_at: string }[]>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "manage" | "payments" | "players">("overview");
   const [rosterMenuOpen, setRosterMenuOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -212,6 +213,7 @@ export function AdminPanel() {
         setTournaments(data);
         if (!selectedTournament && data[0]) setSelectedTournament(String(data[0].id));
       }),
+      api<any[]>("admin/announcements/").then(setAnnouncementsList).catch(() => {}),
     ])
       .catch(error => setLoadError(error instanceof Error ? error.message : "Could not load organiser data."))
       .finally(() => setLoading(false));
@@ -270,11 +272,28 @@ export function AdminPanel() {
     event.preventDefault();
     setMessage("");
     try {
-      await api("admin/announcements/", { method: "POST", body: JSON.stringify(announcement) });
+      const created = await api<any>("admin/announcements/", { method: "POST", body: JSON.stringify(announcement) });
       setAnnouncement({ kind: "tournament", title: "", body: "", published: true });
+      if (created?.id) {
+        setAnnouncementsList(current => [created, ...current]);
+      } else {
+        api<any[]>("admin/announcements/").then(setAnnouncementsList).catch(() => {});
+      }
       setMessage("Announcement broadcast to player feed.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not publish announcement.");
+    }
+  };
+
+  const deleteAnnouncement = async (id: number) => {
+    if (!window.confirm("Delete this announcement from the public feed? This cannot be undone.")) return;
+    setMessage("");
+    try {
+      await api(`admin/announcements/${id}/`, { method: "DELETE" });
+      setAnnouncementsList(current => current.filter(item => item.id !== id));
+      setMessage("Announcement deleted successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not delete announcement.");
     }
   };
 
@@ -671,6 +690,44 @@ export function AdminPanel() {
                     Broadcast Announcement
                   </button>
                 </form>
+
+                {/* List of Published Announcements with Delete Button */}
+                <div className="mt-8 border-t-2 border-black dark:border-white/20 pt-6">
+                  <h4 className="mb-4 text-sm font-black uppercase tracking-wider text-black dark:text-white">
+                    Published Updates ({announcementsList.length})
+                  </h4>
+
+                  <div className="space-y-3">
+                    {announcementsList.map(item => (
+                      <div
+                        key={item.id}
+                        className="border-2 border-black dark:border-white/20 bg-white dark:bg-[#121316] p-4 shadow-[3px_3px_0px_#000000] dark:shadow-[3px_3px_0px_#c6f36b] flex flex-wrap items-start justify-between gap-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="neo-badge">{item.kind}</span>
+                            <h5 className="font-black text-sm uppercase text-black dark:text-white truncate">{item.title}</h5>
+                          </div>
+                          <p className="mt-2 text-xs font-semibold text-black/75 dark:text-white/80 line-clamp-2">{item.body}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteAnnouncement(item.id)}
+                          className="neo-danger min-h-9 px-3 text-xs uppercase tracking-wider text-white flex items-center gap-1.5 shrink-0"
+                        >
+                          <Trash2 size={14} strokeWidth={2.5} /> Delete
+                        </button>
+                      </div>
+                    ))}
+
+                    {!announcementsList.length && (
+                      <p className="text-center text-xs font-bold uppercase text-black/50 dark:text-white/50 py-3">
+                        No announcements posted yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </section>
             </>
           )}

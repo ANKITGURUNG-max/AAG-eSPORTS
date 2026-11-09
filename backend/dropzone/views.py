@@ -12,10 +12,26 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import *
 from .serializers import *
 
 logger = logging.getLogger(__name__)
+
+class AdminAuthentication(JWTAuthentication):
+    def authenticate(self, request):
+        if request.headers.get("X-Admin-Token"):
+            try:
+                signing.loads(request.headers["X-Admin-Token"], max_age=settings.ADMIN_SESSION_MAX_AGE, salt="aag-admin")
+                user = User.objects.filter(is_superuser=True).first() or User.objects.filter(is_admin=True).first()
+                if user:
+                    return (user, None)
+            except signing.BadSignature:
+                pass
+        try:
+            return super().authenticate(request)
+        except Exception:
+            return None
 
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -61,8 +77,9 @@ class AdminTournamentViewSet(viewsets.ModelViewSet):
 class AdminAnnouncementViewSet(viewsets.ModelViewSet):
     queryset = Announcement.objects.all().order_by("-created_at")
     serializer_class = AdminAnnouncementSerializer
+    authentication_classes = [AdminAuthentication]
     permission_classes = [IsAdmin]
-    http_method_names = ["get", "post", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def perform_create(self, serializer):
         announcement = serializer.save()
@@ -73,6 +90,12 @@ class AdminAnnouncementViewSet(viewsets.ModelViewSet):
         announcement = serializer.save()
         if self.request.user.is_authenticated:
             AuditLog.objects.create(actor=self.request.user, action="update_announcement", entity="Announcement", entity_id=str(announcement.pk))
+
+    def perform_destroy(self, instance):
+        pk = instance.pk
+        instance.delete()
+        if self.request.user.is_authenticated:
+            AuditLog.objects.create(actor=self.request.user, action="delete_announcement", entity="Announcement", entity_id=str(pk))
 
 class AnnouncementViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Announcement.objects.filter(published=True).order_by("-published_at")

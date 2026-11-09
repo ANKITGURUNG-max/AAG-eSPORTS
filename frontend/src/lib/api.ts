@@ -48,7 +48,11 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     }).join(" ") || (raw && !raw.trim().startsWith("<") ? raw.slice(0, 240) : `Request failed (${response.status})`);
     throw new Error(message);
   }
-  return response.json();
+  if (response.status === 204) {
+    return {} as T;
+  }
+  const text = await response.text();
+  return (text ? JSON.parse(text) : {}) as T;
 }
 export const login = (data: { identifier: string; username?: string; password: string }) => api<{ access: string; refresh: string }>("auth/login", { method: "POST", body: JSON.stringify(data) });
 export const register = (data: Record<string, string>) => api<{ player_id: string; username: string; game_account: { ign: string; uid: string } }>("auth/register", { method: "POST", body: JSON.stringify(data) });

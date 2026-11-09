@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Flame } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Flame, Trash2 } from "lucide-react";
 import { adminLogin, api, login, register } from "./lib/api";
 import { BottomNav } from "./components/BottomNav";
 import { Tournament, TournamentCard } from "./components/TournamentCard";
@@ -440,6 +440,21 @@ export default function App() {
     setActive("home");
   };
 
+  const deleteUpdate = async (id: number) => {
+    if (!window.confirm("Delete this update from the community feed? This cannot be undone.")) return;
+    try {
+      await api(`admin/announcements/${id}/`, { method: "DELETE" });
+      const filtered = updates.filter(update => update.id !== id);
+      setUpdates(filtered);
+      try {
+        localStorage.setItem("aag_cache_updates", JSON.stringify(filtered));
+      } catch {}
+      setError("Announcement deleted.");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Could not delete announcement.");
+    }
+  };
+
   // Route 1: Admin Route (Protected by admin token)
   if (adminRoute && !localStorage.getItem("aag_admin_token")) {
     return <AdminLoginScreen onAuthenticated={() => window.location.reload()} />;
@@ -639,7 +654,19 @@ export default function App() {
             <div className="space-y-4">
               {updates.map(update => (
                 <article key={update.id} className="neo p-5">
-                  <span className="neo-badge">{update.kind}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="neo-badge">{update.kind}</span>
+                    {(profile?.user.is_admin || Boolean(localStorage.getItem("aag_admin_token"))) && (
+                      <button
+                        type="button"
+                        onClick={() => deleteUpdate(update.id)}
+                        className="neo-danger min-h-8 px-2.5 text-[11px] uppercase tracking-wider text-white flex items-center gap-1"
+                        title="Delete Announcement"
+                      >
+                        <Trash2 size={13} strokeWidth={2.5} /> Delete
+                      </button>
+                    )}
+                  </div>
                   <h3 className="mt-2 text-lg font-black uppercase tracking-tight text-black dark:text-white">{update.title}</h3>
                   <p className="mt-2 text-sm font-semibold leading-relaxed text-black/75 dark:text-white/80">{update.body}</p>
                 </article>
