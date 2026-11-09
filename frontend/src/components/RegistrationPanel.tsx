@@ -24,6 +24,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
         if (!active || !team) return;
         setName(team.name);
         setPlayers([team.members[0] || captain, team.members[1] || "", team.members[2] || "", team.members[3] || ""]);
+        if (team.registration_status === "cancelled" || team.registration_status === "refunded") return;
         setSubmitted({ registration_id: team.registration_id, team_id: team.id, payment_status: team.payment_status, cancellation_requested: team.cancellation_requested, pending_invites: team.invite_tokens.length, invite_tokens: team.invite_tokens, demo_status: team.payment_status === "verified" ? team.payment_status : undefined, demo_slot: team.slot });
       })
       .catch(() => {})

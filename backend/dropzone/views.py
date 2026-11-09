@@ -132,7 +132,10 @@ class TeamViewSet(viewsets.ModelViewSet):
             "invite_tokens": [{"uid": invite.uid, "token": str(invite.token)} for invite in invites],
         }, status=status.HTTP_201_CREATED)
     def list(self, request, *args, **kwargs):
-        teams = self.queryset.filter(captain=request.user).prefetch_related("members__user", "registrations__payment", "registrations__invitations")
+        teams = self.queryset.filter(
+            captain=request.user,
+            registrations__status__in=["pending", "confirmed"],
+        ).prefetch_related("members__user", "registrations__payment", "registrations__invitations")
         tournament_id = request.query_params.get("tournament")
         if tournament_id:
             teams = teams.filter(registrations__tournament_id=tournament_id)
