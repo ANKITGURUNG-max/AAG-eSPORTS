@@ -1,22 +1,180 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, CreditCard, Megaphone, Plus, Save, ShieldCheck, Trash2, Users, Video } from "lucide-react";
+import { CheckCircle2, CreditCard, Megaphone, Plus, Save, ShieldCheck, Trash2, Users, Video, XCircle } from "lucide-react";
 import { api } from "../lib/api";
 import { AdminPanelSkeleton } from "./Skeletons";
 import { Toast } from "./Toast";
 
-type Payment = { id: number; reference: string; status: string; amount: string; team: string; tournament: string; tournament_id: number; pending_invites?: string[]; cancellation_requested?: boolean };
+type Payment = {
+  id: number;
+  reference: string;
+  status: string;
+  amount: string;
+  team: string;
+  tournament: string;
+  tournament_id: number;
+  pending_invites?: string[];
+  cancellation_requested?: boolean;
+};
 type Stats = { users: number; active_tournaments: number; registrations: number; pending_payments: number };
-type Tournament = { id: number; title: string; slug: string; description: string; rules: string; match_at: string; registration_deadline: string; entry_fee: string; prize_pool: string; status: string; live_stream_url?: string };
-type RosterSlot = { slot: number; status: string; team: string | null; captain?: string; payment_status?: string; players: { player_id: string; username: string; role: string; ign: string; uid: string }[] };
-type Player = { id: number; player_id: string; username: string; name: string; email: string; phone: string; is_active: boolean; date_joined: string; game_account: { ign: string; uid: string; game: string } | null };
+type Tournament = {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  rules: string;
+  match_at: string;
+  registration_deadline: string;
+  entry_fee: string;
+  prize_pool: string;
+  status: string;
+  live_stream_url?: string;
+};
+type RosterSlot = {
+  slot: number;
+  status: string;
+  team: string | null;
+  captain?: string;
+  payment_status?: string;
+  players: { player_id: string; username: string; role: string; ign: string; uid: string }[];
+};
+type Player = {
+  id: number;
+  player_id: string;
+  username: string;
+  name: string;
+  email: string;
+  phone: string;
+  is_active: boolean;
+  date_joined: string;
+  game_account: { ign: string; uid: string; game: string } | null;
+};
 
-const emptyTournament = { title: "", slug: "", description: "", rules: "", match_at: "", registration_deadline: "", entry_fee: "0", prize_pool: "0", status: "draft", live_stream_url: "" };
+const emptyTournament = {
+  title: "",
+  slug: "",
+  description: "",
+  rules: "",
+  match_at: "",
+  registration_deadline: "",
+  entry_fee: "0",
+  prize_pool: "0",
+  status: "draft",
+  live_stream_url: "",
+};
 
-function toApiDate(value: string) { return value ? new Date(value).toISOString() : value; }
-function fieldClass() { return "auth-input"; }
+function toApiDate(value: string) {
+  return value ? new Date(value).toISOString() : value;
+}
 
-function PaymentApprovals({ payments, activeTab, approvingPayment, onVerify, onCancel }: { payments: Payment[]; activeTab: "overview" | "payments"; approvingPayment: number | null; onVerify: (id: number) => void; onCancel: (id: number) => void }) {
-  return <section className="glass-panel rounded-2xl p-4 sm:p-5"><div className="mb-4 flex items-center gap-2"><CreditCard size={17} className="text-[#C6F36B]"/><div><h3 className="font-semibold">Payment / registration approval</h3><p className="text-xs text-white/45">{activeTab === "overview" ? "Approvals for the selected roster." : "Review registrations and cancellation requests."}</p></div></div><div className="space-y-3">{payments.map(payment => <div key={payment.id} className="rounded-xl border border-white/10 p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium">{payment.team}</p><p className="truncate text-xs text-white/45">{payment.tournament} · {payment.reference}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase ${payment.cancellation_requested ? "bg-red-400/10 text-red-300" : payment.status === "pending" ? "bg-amber-400/10 text-amber-300" : "bg-white/5 text-white/50"}`}>{payment.cancellation_requested ? "cancellation requested" : payment.status}</span></div>{payment.cancellation_requested && <p className="mt-2 rounded-lg bg-red-400/10 px-2 py-1 text-xs text-red-300">Captain requested team cancellation.</p>}<div className="mt-3 flex items-center justify-between gap-3 text-sm"><span>{Number(payment.amount) === 0 ? "Free entry" : `₹${payment.amount}`}</span>{payment.cancellation_requested ? <button type="button" disabled={approvingPayment !== null} onClick={() => onCancel(payment.id)} className="min-h-9 rounded-lg border border-red-400/30 px-3 text-xs text-red-300 disabled:opacity-60">{approvingPayment === payment.id ? "Cancelling..." : "Approve cancellation"}</button> : payment.status === "pending" ? <button type="button" disabled={approvingPayment !== null} onClick={() => onVerify(payment.id)} className="flex min-h-9 items-center gap-1 rounded-lg bg-[#C6F36B] px-3 text-xs font-semibold text-[#101112] disabled:opacity-60"><CheckCircle2 size={14}/>{approvingPayment === payment.id ? "Approving..." : "Approve & assign slot"}</button> : null}</div></div>)}{!payments.length && <p className="py-5 text-center text-sm text-white/45">{activeTab === "overview" ? "No approvals for this tournament." : "No pending approvals."}</p>}</div></section>;
+function PaymentApprovals({
+  payments,
+  activeTab,
+  approvingPayment,
+  onVerify,
+  onCancel,
+}: {
+  payments: Payment[];
+  activeTab: "overview" | "payments";
+  approvingPayment: number | null;
+  onVerify: (id: number) => void;
+  onCancel: (id: number) => void;
+}) {
+  return (
+    <section className="neo p-5 sm:p-6">
+      <div className="mb-5 flex items-center justify-between border-b-2 border-black pb-4">
+        <div className="flex items-center gap-2.5">
+          <CreditCard size={20} strokeWidth={2.5} />
+          <div>
+            <h3 className="font-black uppercase tracking-tight text-black sm:text-lg">Payment & Squad Approvals</h3>
+            <p className="text-xs font-bold text-black/60">
+              {activeTab === "overview" ? "Approvals for currently selected tournament." : "Verify fee payments and allocate slots."}
+            </p>
+          </div>
+        </div>
+        <span className="border-2 border-black bg-black px-2.5 py-1 text-xs font-black text-white">
+          {payments.length} RECORD{payments.length === 1 ? "" : "S"}
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {payments.map(payment => (
+          <div key={payment.id} className="border-2 border-black bg-white p-4 shadow-[3px_3px_0px_#000000]">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-base text-black">{payment.team}</span>
+                  {payment.cancellation_requested && (
+                    <span className="border border-black bg-[#FF4757] px-2 py-0.5 text-[10px] font-black uppercase text-white">
+                      Cancel Requested
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 truncate text-xs font-bold text-black/60">
+                  {payment.tournament} · Ref: <span className="font-mono text-black">{payment.reference}</span>
+                </p>
+              </div>
+
+              <span
+                className={`border-2 border-black px-2.5 py-1 text-xs font-black uppercase tracking-wider ${
+                  payment.cancellation_requested
+                    ? "bg-[#FF4757] text-white"
+                    : payment.status === "verified"
+                    ? "bg-[#C6F36B] text-black"
+                    : payment.status === "pending"
+                    ? "bg-[#FFE600] text-black"
+                    : "bg-white text-black/70"
+                }`}
+              >
+                {payment.status}
+              </span>
+            </div>
+
+            {payment.cancellation_requested && (
+              <div className="mt-3 border-2 border-black bg-[#FFE600] p-2 text-xs font-black text-black">
+                Captain requested team retraction. Approving will release their slot.
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t-2 border-black/10 pt-3">
+              <span className="text-sm font-black text-black">
+                {Number(payment.amount) === 0 ? "FREE ENTRY" : `ENTRY: ₹${payment.amount}`}
+              </span>
+
+              <div className="flex gap-2">
+                {payment.cancellation_requested ? (
+                  <button
+                    type="button"
+                    disabled={approvingPayment !== null}
+                    onClick={() => onCancel(payment.id)}
+                    className="neo-danger min-h-10 px-4 text-xs uppercase tracking-wider text-white disabled:opacity-60 flex items-center gap-1.5"
+                  >
+                    <XCircle size={15} strokeWidth={2.5} />
+                    {approvingPayment === payment.id ? "Processing..." : "Approve Cancellation"}
+                  </button>
+                ) : payment.status === "pending" ? (
+                  <button
+                    type="button"
+                    disabled={approvingPayment !== null}
+                    onClick={() => onVerify(payment.id)}
+                    className="neo-solid min-h-10 px-4 text-xs uppercase tracking-wider text-black disabled:opacity-60 flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 size={16} strokeWidth={3} />
+                    {approvingPayment === payment.id ? "Verifying..." : "Verify Payment & Assign Slot"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {!payments.length && (
+          <div className="border-2 border-black bg-[#F4EFE6] p-8 text-center text-sm font-black uppercase text-black/60">
+            {activeTab === "overview" ? "No approvals required for this tournament." : "All payments and registrations up to date."}
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 export function AdminPanel() {
@@ -46,64 +204,669 @@ export function AdminPanel() {
     Promise.all([
       api<Stats>("admin/stats/").then(setStats),
       api<Payment[]>("admin/payments/").then(setPayments),
-      api<Player[]>("admin/players").then(data => setPlayers(Array.from(new Map(data.map(player => [player.id, player])).values()))),
-      api<Tournament[]>("admin/tournaments/").then(data => { setTournaments(data); if (!selectedTournament && data[0]) setSelectedTournament(String(data[0].id)); }),
-    ]).catch(error => setLoadError(error instanceof Error ? error.message : "Could not load organiser data.")).finally(() => setLoading(false));
+      api<Player[]>("admin/players").then(data =>
+        setPlayers(Array.from(new Map(data.map(player => [player.id, player])).values()))
+      ),
+      api<Tournament[]>("admin/tournaments/").then(data => {
+        setTournaments(data);
+        if (!selectedTournament && data[0]) setSelectedTournament(String(data[0].id));
+      }),
+    ])
+      .catch(error => setLoadError(error instanceof Error ? error.message : "Could not load organiser data."))
+      .finally(() => setLoading(false));
   };
+
   useEffect(load, []);
+
   useEffect(() => {
     if (!selectedTournament) return;
     const tournament = tournaments.find(item => String(item.id) === selectedTournament);
-    if (tournament) setTournamentForm({ ...emptyTournament, ...tournament, match_at: tournament.match_at.slice(0, 16), registration_deadline: tournament.registration_deadline.slice(0, 16) });
-    api<{ slots: RosterSlot[] }>(`admin/tournaments/${selectedTournament}/roster`).then(data => setRoster(data.slots)).catch(error => { setRoster([]); setLoadError(error instanceof Error ? error.message : "Could not load tournament roster."); });
+    if (tournament)
+      setTournamentForm({
+        ...emptyTournament,
+        ...tournament,
+        match_at: tournament.match_at.slice(0, 16),
+        registration_deadline: tournament.registration_deadline.slice(0, 16),
+      });
+    api<{ slots: RosterSlot[] }>(`admin/tournaments/${selectedTournament}/roster`)
+      .then(data => setRoster(data.slots))
+      .catch(error => {
+        setRoster([]);
+        setLoadError(error instanceof Error ? error.message : "Could not load tournament roster.");
+      });
   }, [selectedTournament, tournaments]);
 
-  const updateTournamentField = (field: keyof typeof emptyTournament, value: string) => setTournamentForm(current => ({ ...current, [field]: value }));
+  const updateTournamentField = (field: keyof typeof emptyTournament, value: string) =>
+    setTournamentForm(current => ({ ...current, [field]: value }));
+
   const saveTournament = async (event: React.FormEvent) => {
-    event.preventDefault(); setMessage("");
+    event.preventDefault();
+    setMessage("");
     try {
-      const payload = { ...tournamentForm, match_at: toApiDate(tournamentForm.match_at), registration_deadline: toApiDate(tournamentForm.registration_deadline), entry_fee: Number(tournamentForm.entry_fee), prize_pool: Number(tournamentForm.prize_pool), game: "free_fire", mode: "squad" };
-      if (selectedTournament) await api(`admin/tournaments/${selectedTournament}/`, { method: "PATCH", body: JSON.stringify(payload) });
-      else { const created = await api<Tournament>("admin/tournaments/", { method: "POST", body: JSON.stringify(payload) }); setSelectedTournament(String(created.id)); }
-      setMessage("Tournament saved. The player listing is updated.");
+      const payload = {
+        ...tournamentForm,
+        match_at: toApiDate(tournamentForm.match_at),
+        registration_deadline: toApiDate(tournamentForm.registration_deadline),
+        entry_fee: Number(tournamentForm.entry_fee),
+        prize_pool: Number(tournamentForm.prize_pool),
+        game: "free_fire",
+        mode: "squad",
+      };
+      if (selectedTournament)
+        await api(`admin/tournaments/${selectedTournament}/`, { method: "PATCH", body: JSON.stringify(payload) });
+      else {
+        const created = await api<Tournament>("admin/tournaments/", { method: "POST", body: JSON.stringify(payload) });
+        setSelectedTournament(String(created.id));
+      }
+      setMessage("Tournament saved. Listing updated.");
       load();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not save tournament."); }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save tournament.");
+    }
   };
+
   const publishAnnouncement = async (event: React.FormEvent) => {
-    event.preventDefault(); setMessage("");
+    event.preventDefault();
+    setMessage("");
     try {
       await api("admin/announcements/", { method: "POST", body: JSON.stringify(announcement) });
       setAnnouncement({ kind: "tournament", title: "", body: "", published: true });
-      setMessage("Announcement published to the player Updates feed.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not publish announcement."); }
+      setMessage("Announcement broadcast to player feed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not publish announcement.");
+    }
   };
-  const verify = async (id: number) => { setMessage(""); setApprovingPayment(id); try { const result = await api<{ status: string; slot: number | null }>(`admin/payments/${id}/verify/`, { method: "POST" }); setMessage(result.slot ? `Payment approved. Slot ${String(result.slot).padStart(2, "0")} allocated.` : "Payment approved."); load(); } catch (error) { setMessage(error instanceof Error ? error.message : "Payment approval failed."); } finally { setApprovingPayment(null); } };
-  const cancelPayment = async (id: number) => { setMessage(""); setApprovingPayment(id); try { await api(`admin/payments/${id}/cancel/`, { method: "POST" }); setMessage("Cancellation approved and slot released."); load(); } catch (error) { setMessage(error instanceof Error ? error.message : "Cancellation approval failed."); } finally { setApprovingPayment(null); } };
+
+  const verify = async (id: number) => {
+    setMessage("");
+    setApprovingPayment(id);
+    try {
+      const result = await api<{ status: string; slot: number | null }>(`admin/payments/${id}/verify/`, {
+        method: "POST",
+      });
+      setMessage(
+        result.slot
+          ? `Payment verified! Slot ${String(result.slot).padStart(2, "0")} allocated.`
+          : "Payment approved."
+      );
+      load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Payment approval failed.");
+    } finally {
+      setApprovingPayment(null);
+    }
+  };
+
+  const cancelPayment = async (id: number) => {
+    setMessage("");
+    setApprovingPayment(id);
+    try {
+      await api(`admin/payments/${id}/cancel/`, { method: "POST" });
+      setMessage("Cancellation confirmed and slot released.");
+      load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Cancellation approval failed.");
+    } finally {
+      setApprovingPayment(null);
+    }
+  };
+
   const deletePlayer = async (player: Player) => {
-    if (!window.confirm(`Delete ${player.name || player.username} and their player account details? This cannot be undone.`)) return;
+    if (
+      !window.confirm(
+        `Delete player ${player.name || player.username} (${player.player_id})? This cannot be undone.`
+      )
+    )
+      return;
     setMessage("");
     try {
       await api(`admin/players/${player.id}`, { method: "DELETE" });
       setPlayers(current => current.filter(item => item.id !== player.id));
-      setMessage("Player details deleted.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not delete player details."); }
+      setMessage("Player account deleted.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not delete player details.");
+    }
   };
-  const input = (field: keyof typeof emptyTournament, label: string, type = "text") => <label className="block text-xs text-white/50">{label}<input required={field === "title" || field === "slug" || field === "description" || field === "match_at" || field === "registration_deadline"} type={type} value={tournamentForm[field]} onChange={event => updateTournamentField(field, event.target.value)} className={`${fieldClass()} mt-1`}/></label>;
-  const visiblePayments = activeTab === "overview" && selectedTournament ? payments.filter(payment => String(payment.tournament_id) === selectedTournament) : payments;
-  const pendingInvites = (payment: Payment) => payment.pending_invites || [];
+
+  const visiblePayments =
+    activeTab === "overview" && selectedTournament
+      ? payments.filter(payment => String(payment.tournament_id) === selectedTournament)
+      : payments;
   const cancellationRequests = payments.filter(payment => payment.cancellation_requested).length;
 
-  return <div className="space-y-4">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-center gap-2"><ShieldCheck size={18} className="text-[#C6F36B]"/><div><p className="text-xs uppercase tracking-[.2em] text-[#C6F36B]">Protected area · /admin</p><h2 className="text-xl font-semibold">AAG eSports organiser dashboard</h2></div></div><a href="/" className="text-sm text-[#C6F36B]">Open player app →</a></div>
-    <Toast message={loadError} tone="error"/>
-    {loading && <AdminPanelSkeleton/>}
-    {!loading && <>
-    {stats && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Players logged in", stats.users], ["Active tournaments", stats.active_tournaments], ["Registrations", stats.registrations], ["Pending payments", stats.pending_payments]].map(([label, value]) => <div key={label} className="rounded-2xl bg-[#191B1D] p-4"><p className="text-xs text-white/45">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>)}</div>}
-    <Toast message={message}/>
-    <div className="glass-nav grid grid-cols-4 gap-1 rounded-2xl p-1"><button type="button" onClick={() => setActiveTab("overview")} className={`min-h-11 rounded-xl text-sm font-medium transition ${activeTab === "overview" ? "bg-[#C6F36B] text-[#101112]" : "text-white/55 hover:bg-white/5"}`}>Overview</button><button type="button" onClick={() => setActiveTab("manage")} className={`min-h-11 rounded-xl text-sm font-medium transition ${activeTab === "manage" ? "bg-[#C6F36B] text-[#101112]" : "text-white/55 hover:bg-white/5"}`}>Manage</button><button type="button" onClick={() => setActiveTab("payments")} className={`flex min-h-11 items-center justify-center gap-1 rounded-xl text-sm font-medium transition ${activeTab === "payments" ? "bg-[#C6F36B] text-[#101112]" : "text-white/55 hover:bg-white/5"}`}><CreditCard size={15}/> Payments{(payments.filter(payment => payment.status === "pending").length + cancellationRequests) > 0 && <span className={`rounded-full px-1.5 text-[10px] ${activeTab === "payments" ? "bg-[#101112]/15" : "bg-amber-400/15 text-amber-300"}`}>{payments.filter(payment => payment.status === "pending").length + cancellationRequests}</span>}</button><button type="button" onClick={() => setActiveTab("players")} className={`flex min-h-11 items-center justify-center gap-1 rounded-xl text-sm font-medium transition ${activeTab === "players" ? "bg-[#C6F36B] text-[#101112]" : "text-white/55 hover:bg-white/5"}`}><Users size={15}/> Players</button></div>
-    {activeTab === "manage" && <><section className="glass-panel rounded-2xl p-4 sm:p-5"><div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Video size={17} className="text-[#C6F36B]"/><h3 className="font-semibold">Tournament listing</h3></div><button type="button" onClick={() => { setSelectedTournament(""); setTournamentForm(emptyTournament); }} className="flex min-h-9 items-center gap-1 rounded-lg border border-[#C6F36B]/30 px-3 text-xs text-[#C6F36B]"><Plus size={14}/> New tournament</button></div><div className="mb-5 grid gap-2 sm:grid-cols-2">{tournaments.map(tournament => <button type="button" key={tournament.id} onClick={() => setSelectedTournament(String(tournament.id))} className={`rounded-xl border p-3 text-left ${String(tournament.id) === selectedTournament ? "border-[#C6F36B]/50 bg-[#C6F36B]/10" : "border-white/10"}`}><p className="font-medium">{tournament.title}</p><p className="mt-1 text-xs text-white/45">{tournament.status} · {new Date(tournament.match_at).toLocaleDateString()}</p></button>)}</div><form onSubmit={saveTournament} className="space-y-3"><div className="grid gap-3 sm:grid-cols-2">{input("title", "Tournament title")}{input("slug", "URL slug")}</div><div className="grid gap-3 sm:grid-cols-2">{input("match_at", "Match date and time", "datetime-local")}{input("registration_deadline", "Registration deadline", "datetime-local")}</div><div className="grid gap-3 sm:grid-cols-3">{input("entry_fee", "Entry fee", "number")}{input("prize_pool", "Prize pool", "number")}<label className="block text-xs text-white/50">Status<select value={tournamentForm.status} onChange={event => updateTournamentField("status", event.target.value)} className={`${fieldClass()} mt-1`}><option value="draft">Draft</option><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="completed">Completed</option><option value="closed">Closed</option></select></label></div><label className="block text-xs text-white/50">Description<textarea required value={tournamentForm.description} onChange={event => updateTournamentField("description", event.target.value)} className={`${fieldClass()} mt-1 min-h-20`}/></label><label className="block text-xs text-white/50">Rules<textarea value={tournamentForm.rules} onChange={event => updateTournamentField("rules", event.target.value)} className={`${fieldClass()} mt-1 min-h-16`}/></label><label className="block text-xs text-white/50">YouTube live link<input type="url" placeholder="https://youtube.com/watch?v=..." value={tournamentForm.live_stream_url} onChange={event => updateTournamentField("live_stream_url", event.target.value)} className={`${fieldClass()} mt-1`}/></label><button className="flex min-h-11 items-center gap-2 rounded-xl bg-[#C6F36B] px-4 text-sm font-semibold text-[#101112]"><Save size={16}/> Save tournament</button></form></section>
-    <section className="glass-panel rounded-2xl p-4 sm:p-5"><div className="mb-4 flex items-center gap-2"><Megaphone size={17} className="text-[#C6F36B]"/><h3 className="font-semibold">Upcoming tournament announcement</h3></div><form onSubmit={publishAnnouncement} className="space-y-3"><select value={announcement.kind} onChange={event => setAnnouncement(current => ({ ...current, kind: event.target.value }))} className={fieldClass()}><option value="tournament">Tournament</option><option value="schedule">Schedule</option><option value="news">News</option><option value="maintenance">Maintenance</option></select><input required value={announcement.title} onChange={event => setAnnouncement(current => ({ ...current, title: event.target.value }))} placeholder="Announcement title" className={fieldClass()}/><textarea required value={announcement.body} onChange={event => setAnnouncement(current => ({ ...current, body: event.target.value }))} placeholder="Tell players what is happening..." className={`${fieldClass()} min-h-24`}/><button className="min-h-11 rounded-xl bg-[#C6F36B] px-4 text-sm font-semibold text-[#101112]">Publish announcement</button></form></section>
-    </>}{activeTab === "overview" && <><section className="glass-panel rounded-2xl p-4 sm:p-5"><label className="mb-2 block text-xs uppercase tracking-widest text-white/45">Selected roster</label><div className="relative"><button type="button" aria-expanded={rosterMenuOpen} onClick={() => setRosterMenuOpen(open => !open)} className="auth-input flex w-full items-center justify-between gap-3 text-left"><span className="truncate">{tournaments.find(tournament => String(tournament.id) === selectedTournament)?.title || "Choose a tournament"}</span><span className={`text-[#C6F36B] transition-transform ${rosterMenuOpen ? "rotate-180" : ""}`}>⌄</span></button>{rosterMenuOpen &&         <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-10 max-h-64 overflow-y-auto rounded-2xl border border-white/15 bg-[#191B1D] p-1.5 shadow-2xl" style={{ backgroundColor: "#191B1D", backdropFilter: "none", WebkitBackdropFilter: "none" }}>{tournaments.map(tournament => <button type="button" key={tournament.id} onClick={() => { setSelectedTournament(String(tournament.id)); setRosterMenuOpen(false); }} className={`w-full rounded-xl px-3 py-3 text-left text-sm transition-colors ${String(tournament.id) === selectedTournament ? "bg-[#C6F36B]/15 text-[#C6F36B]" : "text-white/70 hover:bg-white/10 hover:text-white"}`}><span className="block truncate">{tournament.title}</span><span className="mt-1 block text-xs text-white/40">{tournament.status} · {new Date(tournament.match_at).toLocaleDateString()}</span></button>)}</div>}</div><div className="mt-5 space-y-3">{roster.map(slot => <article key={slot.slot} className={`rounded-xl border p-3 ${slot.status === "confirmed" ? "border-[#C6F36B]/30" : "border-white/10"}`}><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#101112] text-sm font-bold text-[#C6F36B]">{String(slot.slot).padStart(2, "0")}</span><div><p className="font-medium">{slot.team || "Available"}</p><p className="text-xs uppercase text-white/40">{slot.status} {slot.payment_status ? `· payment ${slot.payment_status}` : ""}</p></div></div>{slot.captain && <span className="text-xs text-white/40">Captain {slot.captain}</span>}</div>{slot.players.length > 0 && <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[560px] text-left text-xs"><thead className="text-white/40"><tr><th className="pb-2">Player ID</th><th className="pb-2">IGN</th><th className="pb-2">UID</th><th className="pb-2">Role</th></tr></thead><tbody>{slot.players.map(player => <tr key={`${slot.slot}-${player.player_id}`} className="border-t border-white/5"><td className="py-2">{player.player_id}</td><td className="py-2">{player.ign || "Pending claim"}</td><td className="py-2">{player.uid}</td><td className="py-2 text-white/45">{player.role}</td></tr>)}</tbody></table></div>}</article>)}</div></section></>}
-    </>}    {(activeTab === "overview" || activeTab === "payments") && <PaymentApprovals payments={visiblePayments} activeTab={activeTab} approvingPayment={approvingPayment} onVerify={verify} onCancel={cancelPayment}/>}    {activeTab === "players" && <section className="glass-panel rounded-2xl p-4 sm:p-5"><div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Users size={17} className="text-[#C6F36B]"/><h3 className="font-semibold">Player information</h3></div><span className="text-xs text-white/45">{players.length} registered</span></div><div className="overflow-x-auto"><table className="w-full min-w-[840px] text-left text-xs"><thead className="text-white/40"><tr><th className="pb-3">Player ID</th><th className="pb-3">Player</th><th className="pb-3">IGN</th><th className="pb-3">UID</th><th className="pb-3">Contact</th><th className="pb-3">Joined</th><th className="pb-3">Status</th><th className="pb-3">Action</th></tr></thead><tbody>{players.map(player => <tr key={player.id} className="border-t border-white/5"><td className="py-3 font-medium text-[#C6F36B]">{player.player_id}</td><td className="py-3"><p>{player.name || player.username}</p>{player.name && <p className="text-white/40">@{player.username}</p>}</td><td className="py-3">{player.game_account?.ign || <span className="text-white/35">Not added</span>}</td><td className="py-3">{player.game_account?.uid || <span className="text-white/35">Not added</span>}</td><td className="py-3"><p>{player.email || "—"}</p><p className="text-white/40">{player.phone || "No phone"}</p></td><td className="py-3 text-white/55">{new Date(player.date_joined).toLocaleDateString()}</td><td className="py-3"><span className={`rounded-full px-2 py-1 ${player.is_active ? "bg-[#C6F36B]/10 text-[#C6F36B]" : "bg-red-400/10 text-red-300"}`}>{player.is_active ? "Active" : "Inactive"}</span></td><td className="py-3"><button type="button" onClick={() => deletePlayer(player)} className="flex min-h-9 items-center gap-1 rounded-lg border border-red-400/30 px-2 text-red-300 transition hover:bg-red-400/10"><Trash2 size={14}/> Delete</button></td></tr>)}</tbody></table></div>{!players.length && <p className="py-8 text-center text-sm text-white/45">No registered players yet.</p>}</section>}
-  </div>;
+  return (
+    <div className="space-y-6">
+      {/* Top Organiser Bar */}
+      <div className="neo p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center border-2 border-black bg-[#C6F36B] text-black">
+            <ShieldCheck size={22} strokeWidth={2.5} />
+          </div>
+          <div>
+            <span className="neo-badge">PROTECTED ORGANISER ACCESS</span>
+            <h2 className="mt-1 text-xl font-black uppercase tracking-tight text-black sm:text-2xl">
+              AAG eSports Dashboard
+            </h2>
+          </div>
+        </div>
+        <a
+          href="/"
+          className="neo-ghost inline-flex min-h-10 items-center px-4 text-xs font-black uppercase tracking-wider text-white"
+        >
+          Open Player App →
+        </a>
+      </div>
+
+      <Toast message={loadError} tone="error" />
+      <Toast message={message} tone="success" />
+
+      {loading && <AdminPanelSkeleton />}
+
+      {!loading && (
+        <>
+          {/* Stats Cards */}
+          {stats && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ["Total Players", stats.users, "bg-white"],
+                ["Active Tournaments", stats.active_tournaments, "bg-[#C6F36B]"],
+                ["Registrations", stats.registrations, "bg-white"],
+                ["Pending Payments", stats.pending_payments, "bg-[#FFE600]"],
+              ].map(([label, value, bg]) => (
+                <div key={label as string} className={`border-[3px] border-black ${bg} p-4 shadow-[4px_4px_0px_#000000]`}>
+                  <p className="text-xs font-black uppercase tracking-wider text-black/70">{label}</p>
+                  <p className="mt-2 text-3xl font-black text-black">{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Navigation Tabs */}
+          <div className="neo p-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("overview")}
+              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === "overview"
+                  ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+              }`}
+            >
+              Overview & Roster
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("manage")}
+              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === "manage"
+                  ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+              }`}
+            >
+              Manage Tournaments
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("payments")}
+              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "payments"
+                  ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+              }`}
+            >
+              <CreditCard size={15} strokeWidth={2.5} />
+              <span>Payments</span>
+              {payments.filter(payment => payment.status === "pending").length + cancellationRequests > 0 && (
+                <span className="border border-black bg-[#FF4757] px-1.5 py-0.2 text-[10px] font-black text-white">
+                  {payments.filter(payment => payment.status === "pending").length + cancellationRequests}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("players")}
+              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "players"
+                  ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                  : "border-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+              }`}
+            >
+              <Users size={15} strokeWidth={2.5} />
+              <span>Players ({players.length})</span>
+            </button>
+          </div>
+
+          {/* TAB: MANAGE */}
+          {activeTab === "manage" && (
+            <>
+              <section className="neo p-5 sm:p-6">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-4">
+                  <div className="flex items-center gap-2">
+                    <Video size={20} strokeWidth={2.5} />
+                    <h3 className="text-xl font-black uppercase tracking-tight text-black">Tournament Editor</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTournament("");
+                      setTournamentForm(emptyTournament);
+                    }}
+                    className="neo-solid min-h-10 px-3 text-xs uppercase tracking-wider text-black flex items-center gap-1.5"
+                  >
+                    <Plus size={16} strokeWidth={3} /> Create New Tournament
+                  </button>
+                </div>
+
+                <div className="mb-6 grid gap-2.5 sm:grid-cols-2">
+                  {tournaments.map(tournament => (
+                    <button
+                      type="button"
+                      key={tournament.id}
+                      onClick={() => setSelectedTournament(String(tournament.id))}
+                      className={`border-2 p-3 text-left transition-all ${
+                        String(tournament.id) === selectedTournament
+                          ? "border-black bg-[#C6F36B] shadow-[3px_3px_0px_#000000]"
+                          : "border-black bg-white hover:bg-[#F4EFE6]"
+                      }`}
+                    >
+                      <p className="font-black text-black">{tournament.title}</p>
+                      <p className="mt-1 text-xs font-bold text-black/60 uppercase">
+                        Status: {tournament.status} · {new Date(tournament.match_at).toLocaleDateString()}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+
+                <form onSubmit={saveTournament} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                        Tournament Title *
+                      </label>
+                      <input
+                        required
+                        value={tournamentForm.title}
+                        onChange={event => updateTournamentField("title", event.target.value)}
+                        className="neo-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                        URL Slug *
+                      </label>
+                      <input
+                        required
+                        value={tournamentForm.slug}
+                        onChange={event => updateTournamentField("slug", event.target.value)}
+                        className="neo-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                        Match Date & Time *
+                      </label>
+                      <input
+                        required
+                        type="datetime-local"
+                        value={tournamentForm.match_at}
+                        onChange={event => updateTournamentField("match_at", event.target.value)}
+                        className="neo-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                        Registration Deadline *
+                      </label>
+                      <input
+                        required
+                        type="datetime-local"
+                        value={tournamentForm.registration_deadline}
+                        onChange={event => updateTournamentField("registration_deadline", event.target.value)}
+                        className="neo-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                        Entry Fee (₹) *
+                      </label>
+                      <input
+                        required
+                        type="number"
+                        value={tournamentForm.entry_fee}
+                        onChange={event => updateTournamentField("entry_fee", event.target.value)}
+                        className="neo-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                        Prize Pool (₹) *
+                      </label>
+                      <input
+                        required
+                        type="number"
+                        value={tournamentForm.prize_pool}
+                        onChange={event => updateTournamentField("prize_pool", event.target.value)}
+                        className="neo-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                        Tournament Status *
+                      </label>
+                      <select
+                        value={tournamentForm.status}
+                        onChange={event => updateTournamentField("status", event.target.value)}
+                        className="neo-input"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="upcoming">Upcoming</option>
+                        <option value="ongoing">Ongoing</option>
+                        <option value="completed">Completed</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      Tournament Description *
+                    </label>
+                    <textarea
+                      required
+                      value={tournamentForm.description}
+                      onChange={event => updateTournamentField("description", event.target.value)}
+                      className="neo-input min-h-24"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      Match Rules & Requirements
+                    </label>
+                    <textarea
+                      value={tournamentForm.rules}
+                      onChange={event => updateTournamentField("rules", event.target.value)}
+                      className="neo-input min-h-20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                      YouTube Live Stream URL (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://youtube.com/watch?v=..."
+                      value={tournamentForm.live_stream_url}
+                      onChange={event => updateTournamentField("live_stream_url", event.target.value)}
+                      className="neo-input"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="neo-solid min-h-12 px-6 text-xs uppercase tracking-wider text-black flex items-center gap-2"
+                  >
+                    <Save size={18} strokeWidth={2.5} /> Save Tournament
+                  </button>
+                </form>
+              </section>
+
+              {/* Announcement Box */}
+              <section className="neo p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-2 border-b-2 border-black pb-3">
+                  <Megaphone size={20} strokeWidth={2.5} />
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black">Publish News & Feed Update</h3>
+                </div>
+                <form onSubmit={publishAnnouncement} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Category</label>
+                      <select
+                        value={announcement.kind}
+                        onChange={event => setAnnouncement(current => ({ ...current, kind: event.target.value }))}
+                        className="neo-input"
+                      >
+                        <option value="tournament">Tournament Update</option>
+                        <option value="schedule">Schedule Announcement</option>
+                        <option value="news">Platform News</option>
+                        <option value="maintenance">Maintenance Alert</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Headline *</label>
+                      <input
+                        required
+                        value={announcement.title}
+                        onChange={event => setAnnouncement(current => ({ ...current, title: event.target.value }))}
+                        placeholder="e.g. Registrations now open for Season 01!"
+                        className="neo-input"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Details *</label>
+                    <textarea
+                      required
+                      value={announcement.body}
+                      onChange={event => setAnnouncement(current => ({ ...current, body: event.target.value }))}
+                      placeholder="Write announcement details for players..."
+                      className="neo-input min-h-24"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="neo-solid min-h-12 px-6 text-xs uppercase tracking-wider text-black"
+                  >
+                    Broadcast Announcement
+                  </button>
+                </form>
+              </section>
+            </>
+          )}
+
+          {/* TAB: OVERVIEW */}
+          {activeTab === "overview" && (
+            <section className="neo p-5 sm:p-6">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-4">
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black">12-Slot Custom Room Roster</h3>
+                  <p className="text-xs font-bold text-black/60">
+                    Review assigned custom room slots, team captains, and players.
+                  </p>
+                </div>
+
+                <div className="relative min-w-60">
+                  <button
+                    type="button"
+                    aria-expanded={rosterMenuOpen}
+                    onClick={() => setRosterMenuOpen(open => !open)}
+                    className="neo-input flex w-full items-center justify-between text-left font-black"
+                  >
+                    <span className="truncate">
+                      {tournaments.find(tournament => String(tournament.id) === selectedTournament)?.title || "Select Tournament"}
+                    </span>
+                    <span className="text-black">▼</span>
+                  </button>
+
+                  {rosterMenuOpen && (
+                    <div className="neo absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 max-h-60 overflow-y-auto p-1 shadow-[5px_5px_0px_#000000]">
+                      {tournaments.map(tournament => (
+                        <button
+                          type="button"
+                          key={tournament.id}
+                          onClick={() => {
+                            setSelectedTournament(String(tournament.id));
+                            setRosterMenuOpen(false);
+                          }}
+                          className={`w-full p-2.5 text-left text-xs font-black uppercase transition-colors ${
+                            String(tournament.id) === selectedTournament
+                              ? "bg-[#C6F36B] text-black"
+                              : "text-black hover:bg-[#F4EFE6]"
+                          }`}
+                        >
+                          <span className="block truncate">{tournament.title}</span>
+                          <span className="mt-0.5 block text-[10px] text-black/60">
+                            {tournament.status} · {new Date(tournament.match_at).toLocaleDateString()}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Roster slots 1 to 12 */}
+              <div className="space-y-3">
+                {roster.map(slot => (
+                  <article
+                    key={slot.slot}
+                    className={`border-2 border-black p-4 shadow-[2px_2px_0px_#000000] ${
+                      slot.status === "confirmed" ? "bg-[#F7FFF0]" : "bg-white"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black bg-[#C6F36B] text-sm font-black text-black">
+                          {String(slot.slot).padStart(2, "0")}
+                        </span>
+                        <div>
+                          <p className="font-black text-base text-black">{slot.team || "SLOT VACANT"}</p>
+                          <p className="text-xs font-bold uppercase text-black/60">
+                            Status: {slot.status} {slot.payment_status ? `· Fee: ${slot.payment_status}` : ""}
+                          </p>
+                        </div>
+                      </div>
+
+                      {slot.captain && (
+                        <span className="border border-black bg-white px-2.5 py-1 text-xs font-black text-black">
+                          Captain: {slot.captain}
+                        </span>
+                      )}
+                    </div>
+
+                    {slot.players.length > 0 && (
+                      <div className="mt-3 overflow-x-auto border-t-2 border-black/10 pt-3">
+                        <table className="w-full min-w-[500px] text-left text-xs font-bold">
+                          <thead>
+                            <tr className="border-b-2 border-black text-black/70">
+                              <th className="pb-1.5 uppercase">Player ID</th>
+                              <th className="pb-1.5 uppercase">Free Fire IGN</th>
+                              <th className="pb-1.5 uppercase">Player UID</th>
+                              <th className="pb-1.5 uppercase">Role</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {slot.players.map(player => (
+                              <tr key={`${slot.slot}-${player.player_id}`} className="border-b border-black/10">
+                                <td className="py-2 font-mono font-black text-black">{player.player_id}</td>
+                                <td className="py-2 text-black">{player.ign || "—"}</td>
+                                <td className="py-2 font-mono text-black">{player.uid}</td>
+                                <td className="py-2 uppercase">
+                                  <span className={player.role === "captain" ? "bg-[#C6F36B] px-1.5 py-0.5 border border-black text-[10px]" : "text-black/60"}>
+                                    {player.role}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* TAB: PAYMENTS (Or shown in Overview) */}
+          {(activeTab === "overview" || activeTab === "payments") && (
+            <PaymentApprovals
+              payments={visiblePayments}
+              activeTab={activeTab}
+              approvingPayment={approvingPayment}
+              onVerify={verify}
+              onCancel={cancelPayment}
+            />
+          )}
+
+          {/* TAB: PLAYERS */}
+          {activeTab === "players" && (
+            <section className="neo p-5 sm:p-6">
+              <div className="mb-5 flex items-center justify-between border-b-2 border-black pb-4">
+                <div className="flex items-center gap-2">
+                  <Users size={20} strokeWidth={2.5} />
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black">Player Directory</h3>
+                </div>
+                <span className="neo-badge">{players.length} Registered Players</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px] text-left text-xs font-bold">
+                  <thead>
+                    <tr className="border-b-2 border-black bg-[#F4EFE6] text-black">
+                      <th className="p-3 uppercase">Player ID</th>
+                      <th className="p-3 uppercase">Username</th>
+                      <th className="p-3 uppercase">Free Fire IGN</th>
+                      <th className="p-3 uppercase">UID</th>
+                      <th className="p-3 uppercase">Contact</th>
+                      <th className="p-3 uppercase">Status</th>
+                      <th className="p-3 uppercase">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {players.map(player => (
+                      <tr key={player.id} className="border-b border-black/10 hover:bg-[#F9F6F0]">
+                        <td className="p-3 font-mono font-black text-black">{player.player_id}</td>
+                        <td className="p-3 font-black text-black">
+                          {player.name || player.username}
+                          {player.name && <span className="block text-[11px] font-normal text-black/60">@{player.username}</span>}
+                        </td>
+                        <td className="p-3 text-black">{player.game_account?.ign || "—"}</td>
+                        <td className="p-3 font-mono text-black">{player.game_account?.uid || "—"}</td>
+                        <td className="p-3 text-black/70">
+                          {player.email || "—"}
+                          {player.phone && <span className="block text-[11px] text-black/50">{player.phone}</span>}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`border border-black px-2 py-0.5 text-[10px] font-black uppercase ${
+                              player.is_active ? "bg-[#C6F36B] text-black" : "bg-[#FF4D4D] text-white"
+                            }`}
+                          >
+                            {player.is_active ? "Active" : "Disabled"}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <button
+                            type="button"
+                            onClick={() => deletePlayer(player)}
+                            className="neo-danger min-h-8 px-2.5 text-[11px] uppercase tracking-wider text-white flex items-center gap-1"
+                          >
+                            <Trash2 size={13} strokeWidth={2.5} /> Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {!players.length && (
+                <div className="p-8 text-center text-sm font-black uppercase text-black/50">
+                  No registered player records found.
+                </div>
+              )}
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
 }

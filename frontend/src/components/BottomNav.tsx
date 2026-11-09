@@ -1,6 +1,38 @@
 import { Home, Trophy, Bell, UserRound, Radio } from "lucide-react";
+
 type Props = { active: string; onChange: (value: string) => void };
+
 export function BottomNav({ active, onChange }: Props) {
-  const items = [["home", "Home", Home], ["tournaments", "Tournaments", Trophy], ["streams", "Live", Radio], ["updates", "Updates", Bell], ["profile", "Profile", UserRound]] as const;
-  return <nav className="glass-nav safe-bottom fixed bottom-0 left-0 right-0 z-20 flex w-full px-1 py-1 md:static md:flex-col md:rounded-2xl md:px-2">{items.map(([id, label, Icon]) => <button key={id} onClick={() => onChange(id)} className={`min-w-0 flex-1 rounded-xl px-1 py-2 text-[10px] font-medium transition-all duration-300 md:w-full md:flex-none md:px-3 md:text-sm ${active === id ? "bg-[#C6F36B]/15 text-[#C6F36B] shadow-[inset_0_1px_rgb(198_243_107/.22),0_0_18px_rgb(198_243_107/.08)]" : "text-white/45 hover:bg-white/5"}`}><span className="flex flex-col items-center gap-1 md:flex-row md:justify-start md:gap-3"><Icon size={18}/><span className="truncate">{label}</span></span></button>)}</nav>;
+  const items = [
+    ["home", "Home", Home],
+    ["tournaments", "Tournaments", Trophy],
+    ["streams", "Live", Radio],
+    ["updates", "Updates", Bell],
+    ["profile", "Profile", UserRound],
+  ] as const;
+
+  return (
+    <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-20 flex w-full border-t-[3px] border-black bg-white p-1 shadow-[0_-4px_0px_#000000] md:static md:flex-col md:border-[3px] md:p-2 md:shadow-[4px_4px_0px_#000000]">
+      {items.map(([id, label, Icon]) => {
+        const isSelected = active === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            className={`min-w-0 flex-1 border-2 p-2 text-xs font-black transition-all md:w-full md:flex-none md:p-3 md:text-sm ${
+              isSelected
+                ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                : "border-transparent bg-transparent text-black hover:border-black hover:bg-[#F4EFE6]"
+            }`}
+          >
+            <span className="flex flex-col items-center gap-1 md:flex-row md:justify-start md:gap-3">
+              <Icon size={20} strokeWidth={2.5} />
+              <span className="truncate uppercase tracking-wider">{label}</span>
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
 }

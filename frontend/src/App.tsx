@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { ChevronLeft, Eye, EyeOff, LogIn, ShieldCheck, Sparkles } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Flame } from "lucide-react";
 import { adminLogin, api, login, register } from "./lib/api";
 import { BottomNav } from "./components/BottomNav";
 import { Tournament, TournamentCard } from "./components/TournamentCard";
@@ -11,35 +11,229 @@ import { ParticipationList } from "./components/ParticipationList";
 import { DefaultAvatar } from "./components/DefaultAvatar";
 import { PlayerAppSkeleton } from "./components/Skeletons";
 import { LiveStreamsPanel } from "./components/LiveStreamsPanel";
+import { Toast } from "./components/Toast";
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: string; refresh: string }) => void }) {
   const [mode, setMode] = useState<"register" | "login">("register");
-  const [form, setForm] = useState({ identifier: "", username: "", email: "", password: "", first_name: "", last_name: "", phone: "", ign: "", uid: "" });
+  const [form, setForm] = useState({
+    identifier: "",
+    username: "",
+    email: "",
+    password: "",
+    first_name: "",
+    last_name: "",
+    phone: "",
+    ign: "",
+    uid: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const update = (key: keyof typeof form) => (event: ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: event.target.value });
+
+  const update = (key: keyof typeof form) => (event: ChangeEvent<HTMLInputElement>) =>
+    setForm({ ...form, [key]: event.target.value });
+
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); setError(""); setLoading(true);
+    event.preventDefault();
+    setError("");
+    setLoading(true);
     try {
-      const created = mode === "register" ? await register({
-        username: form.username.trim(),
-        email: form.email.trim(),
-        password: form.password,
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
-        phone: form.phone.trim(),
-        ign: form.ign.trim(),
-        uid: form.uid.trim(),
-      }) : null;
+      const created =
+        mode === "register"
+          ? await register({
+              username: form.username.trim(),
+              email: form.email.trim(),
+              password: form.password,
+              first_name: form.first_name.trim(),
+              last_name: form.last_name.trim(),
+              phone: form.phone.trim(),
+              ign: form.ign.trim(),
+              uid: form.uid.trim(),
+            })
+          : null;
       const identifier = created?.username || form.identifier.trim() || form.username.trim();
       const token = await login({ identifier, username: identifier, password: form.password });
       onAuthenticated(token);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unable to continue. Please try again.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
-  return <main className="flex min-h-screen items-center bg-[#101112] px-4 py-8 text-[#F4F4F0] sm:px-6"><div className="mx-auto w-full max-w-md"><div className="mb-10"><p className="text-2xl font-black tracking-tight">AAG <span className="text-[#C6F36B]">eSports</span></p><p className="mt-8 text-xs uppercase tracking-[.25em] text-[#C6F36B]">Free Fire arena</p><h1 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">{mode === "register" ? "Create your player account." : "Welcome back, player."}</h1><p className="mt-3 text-sm leading-6 text-white/55">{mode === "register" ? "Join tournaments, build your squad, and get your unique Player ID." : "Sign in with your username, Player ID, or Free Fire UID."}</p></div><form onSubmit={submit} className="space-y-3 rounded-3xl border border-white/10 bg-[#191B1D] p-4 sm:p-6">{mode === "register" && <div className="grid grid-cols-2 gap-3"><input required value={form.first_name} onChange={update("first_name")} placeholder="First name" className="auth-input"/><input value={form.last_name} onChange={update("last_name")} placeholder="Last name" className="auth-input"/></div>}<input required value={mode === "register" ? form.username : form.identifier} onChange={update(mode === "register" ? "username" : "identifier")} placeholder={mode === "register" ? "Username" : "Username, Player ID, or Free Fire UID"} autoComplete="username" className="auth-input"/>{mode === "register" && <><input required type="email" value={form.email} onChange={update("email")} placeholder="Email address" className="auth-input"/><input value={form.phone} onChange={update("phone")} placeholder="Phone number (optional)" className="auth-input"/><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><input required value={form.ign} onChange={update("ign")} placeholder="Free Fire IGN" className="auth-input"/><input required value={form.uid} onChange={update("uid")} placeholder="Free Fire UID" inputMode="numeric" className="auth-input"/></div><p className="text-xs leading-5 text-white/45">Your IGN and UID will be saved to your player profile.</p></>}<div className="relative"><input required minLength={8} type={showPassword ? "text" : "password"} value={form.password} onChange={update("password")} placeholder="Password (8+ characters)" autoComplete={mode === "register" ? "new-password" : "current-password"} className="auth-input pr-12"/><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-white/45 transition hover:text-[#C6F36B]">{showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}</button></div>{error && <p className="rounded-xl bg-red-400/10 p-3 text-sm leading-5 text-red-300">{error}</p>}<button disabled={loading} className="min-h-12 w-full rounded-xl bg-[#C6F36B] px-4 py-3 font-semibold text-[#101112] disabled:cursor-wait disabled:opacity-60">{loading ? "Please wait..." : mode === "register" ? "Create account" : "Sign in"}</button></form><button onClick={() => { setMode(mode === "register" ? "login" : "register"); setError(""); setShowPassword(false); }} className="mt-5 block w-full text-center text-sm text-white/55">{mode === "register"   ? "Already have an account? " : "New to AAG eSports? "}<span className="text-[#C6F36B]">{mode === "register" ? "Sign in" : "Create account"}</span></button><p className="mt-8 text-center text-xs leading-5 text-white/30">Your account is required before tournament registration. We never collect card or UPI credentials.</p></div></main>;
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#F4EFE6] px-4 py-8 text-black sm:px-6">
+      <div className="w-full max-w-md">
+        {/* Brand Header */}
+        <div className="mb-6 text-center">
+          <div className="inline-block border-[3px] border-black bg-[#C6F36B] px-4 py-1.5 shadow-[4px_4px_0px_#000000]">
+            <span className="text-2xl font-black tracking-tight text-black sm:text-3xl">
+              AAG <span className="bg-black text-[#C6F36B] px-1.5">eSports</span>
+            </span>
+          </div>
+          <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-black">
+            Free Fire Squad Tournament Hub
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="neo p-6 sm:p-8 shadow-[6px_6px_0px_#000000]">
+          <div className="mb-6 border-b-2 border-black pb-4">
+            <h1 className="text-2xl font-black uppercase tracking-tight text-black sm:text-3xl">
+              {mode === "register" ? "Create Player Account" : "Player Sign In"}
+            </h1>
+            <p className="mt-1 text-xs font-bold text-black/60">
+              {mode === "register"
+                ? "Join tournaments, form squads, and get your custom room slots."
+                : "Sign in with your username, Player ID, or Free Fire UID."}
+            </p>
+          </div>
+
+          <form onSubmit={submit} className="space-y-4">
+            {mode === "register" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">First Name *</label>
+                  <input
+                    required
+                    value={form.first_name}
+                    onChange={update("first_name")}
+                    placeholder="First name"
+                    className="neo-input"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Last Name</label>
+                  <input
+                    value={form.last_name}
+                    onChange={update("last_name")}
+                    placeholder="Last name"
+                    className="neo-input"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">
+                {mode === "register" ? "Username *" : "Username / Player ID / Free Fire UID *"}
+              </label>
+              <input
+                required
+                value={mode === "register" ? form.username : form.identifier}
+                onChange={update(mode === "register" ? "username" : "identifier")}
+                placeholder={mode === "register" ? "Choose a username" : "Enter username, DZ-ID, or UID"}
+                autoComplete="username"
+                className="neo-input"
+              />
+            </div>
+
+            {mode === "register" && (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Email *</label>
+                    <input
+                      required
+                      type="email"
+                      value={form.email}
+                      onChange={update("email")}
+                      placeholder="player@gmail.com"
+                      className="neo-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Phone</label>
+                    <input
+                      value={form.phone}
+                      onChange={update("phone")}
+                      placeholder="WhatsApp phone"
+                      className="neo-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t-2 border-black pt-3">
+                  <p className="mb-2 text-xs font-black uppercase tracking-wider text-black flex items-center gap-1.5">
+                    <Flame size={15} strokeWidth={2.5} className="text-[#FF4757]" /> Free Fire In-Game Account
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <input
+                        required
+                        value={form.ign}
+                        onChange={update("ign")}
+                        placeholder="In-Game Name (IGN)"
+                        className="neo-input"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        required
+                        value={form.uid}
+                        onChange={update("uid")}
+                        placeholder="Free Fire UID"
+                        inputMode="numeric"
+                        className="neo-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase tracking-wider text-black">Password *</label>
+              <div className="relative">
+                <input
+                  required
+                  minLength={8}
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={update("password")}
+                  placeholder="8+ characters"
+                  autoComplete={mode === "register" ? "new-password" : "current-password"}
+                  className="neo-input pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(value => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-0 grid w-12 place-items-center text-black/70 hover:text-black"
+                >
+                  {showPassword ? <EyeOff size={18} strokeWidth={2.5} /> : <Eye size={18} strokeWidth={2.5} />}
+                </button>
+              </div>
+            </div>
+
+            <Toast message={error} tone="error" />
+
+            <button
+              disabled={loading}
+              type="submit"
+              className="neo-solid mt-4 min-h-14 w-full text-sm uppercase tracking-wider text-black disabled:cursor-wait disabled:opacity-60"
+            >
+              {loading ? "Please wait..." : mode === "register" ? "Create Player Account" : "Sign In to Arena"}
+            </button>
+          </form>
+
+          <div className="mt-6 border-t-2 border-black pt-4 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === "register" ? "login" : "register");
+                setError("");
+                setShowPassword(false);
+              }}
+              className="text-xs font-black uppercase tracking-wider text-black hover:underline"
+            >
+              {mode === "register" ? "Already have an account? Sign in →" : "New player? Create an account →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }
 
 function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
@@ -47,34 +241,356 @@ function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); setLoading(true); setError("");
-    try { const result = await adminLogin(password); localStorage.setItem("aag_admin_token", result.token); onAuthenticated(); }
-    catch (exception) { setError(exception instanceof Error ? exception.message : "Unable to access organiser dashboard."); }
-    finally { setLoading(false); }
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const result = await adminLogin(password);
+      localStorage.setItem("aag_admin_token", result.token);
+      onAuthenticated();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Unable to access organiser dashboard.");
+    } finally {
+      setLoading(false);
+    }
   };
-  return <main className="flex min-h-screen items-center justify-center bg-[#101112] px-4 text-[#F4F4F0]"><form onSubmit={submit} className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#191B1D] p-5 sm:p-6"><p className="text-xs uppercase tracking-[.2em] text-[#C6F36B]">AAG eSports organisers</p><h1 className="mt-3 text-2xl font-semibold">Admin dashboard</h1><p className="mt-2 text-sm leading-5 text-white/55">Enter the organiser password to manage tournaments, slots, players, and payments.</p><div className="relative mt-5"><input required type={showPassword ? "text" : "password"} value={password} onChange={event => setPassword(event.target.value)} placeholder="Organiser password" className="auth-input pr-12" autoComplete="current-password"/><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-white/45 transition hover:text-[#C6F36B]">{showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}</button></div>{error && <p className="mt-3 rounded-xl bg-red-400/10 p-3 text-sm text-red-300">{error}</p>}<button disabled={loading} className="mt-4 min-h-12 w-full rounded-xl bg-[#C6F36B] font-semibold text-[#101112] disabled:opacity-60">{loading ? "Checking..." : "Open dashboard"}</button></form></main>;
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#F4EFE6] px-4 text-black">
+      <form onSubmit={submit} className="neo w-full max-w-sm p-6 sm:p-8 shadow-[6px_6px_0px_#000000]">
+        <span className="neo-badge">ORGANISER VERIFICATION</span>
+        <h1 className="mt-3 text-2xl font-black uppercase tracking-tight text-black">Admin Access</h1>
+        <p className="mt-1 text-xs font-bold text-black/60">
+          Enter master organiser password to manage matches, allocations, and registrations.
+        </p>
+
+        <div className="relative mt-5">
+          <input
+            required
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={event => setPassword(event.target.value)}
+            placeholder="Organiser password"
+            className="neo-input pr-12"
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(value => !value)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="absolute inset-y-0 right-0 grid w-12 place-items-center text-black/70 hover:text-black"
+          >
+            {showPassword ? <EyeOff size={18} strokeWidth={2.5} /> : <Eye size={18} strokeWidth={2.5} />}
+          </button>
+        </div>
+
+        <Toast message={error} tone="error" />
+
+        <button
+          disabled={loading}
+          type="submit"
+          className="neo-solid mt-5 min-h-12 w-full text-xs uppercase tracking-wider text-black disabled:opacity-60"
+        >
+          {loading ? "Verifying..." : "Unlock Organiser Dashboard"}
+        </button>
+      </form>
+    </main>
+  );
 }
 
 export default function App() {
-  const [active, setActive] = useState("home"); const [tournaments, setTournaments] = useState<Tournament[]>([]); const [liveTournaments, setLiveTournaments] = useState<Tournament[]>([]); const [updates, setUpdates] = useState<any[]>([]); const [profile, setProfile] = useState<UserProfile | null>(null); const [selected, setSelected] = useState<Tournament | null>(null); const [error, setError] = useState("");
+  const [active, setActive] = useState("home");
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [liveTournaments, setLiveTournaments] = useState<Tournament[]>([]);
+  const [updates, setUpdates] = useState<any[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [selected, setSelected] = useState<Tournament | null>(null);
+  const [error, setError] = useState("");
   const [authenticated, setAuthenticated] = useState(Boolean(localStorage.getItem("dropzone_access")));
   const [initialLoading, setInitialLoading] = useState(Boolean(localStorage.getItem("dropzone_access")));
   const [mySlots, setMySlots] = useState<{ tournament: string; match_at: string; team: string; slot: number | null }[]>([]);
-  const [participation, setParticipation] = useState<{ tournament_id: number; title: string; match_at: string; status: string; team: string; slot: number | null }[]>([]);
+  const [participation, setParticipation] = useState<
+    { tournament_id: number; title: string; match_at: string; status: string; team: string; slot: number | null }[]
+  >([]);
+
   const inviteToken = window.location.pathname.startsWith("/invite/") ? window.location.pathname.split("/")[2] : "";
   const adminRoute = /^\/admin\/?$/.test(window.location.pathname);
-  useEffect(() => { if (!authenticated) { setInitialLoading(false); return; } let mounted = true; api<Tournament[]>("tournaments/?status=upcoming").then(setTournaments).catch(() => {}); api<Tournament[]>("tournaments/?status=ongoing").then(setLiveTournaments).catch(() => {}); api<any[]>("announcements/").then(setUpdates).catch(() => {}); api<UserProfile>("me/").then(setProfile).catch(() => { localStorage.removeItem("dropzone_access"); setAuthenticated(false); }).finally(() => { if (mounted) setInitialLoading(false); }); api<typeof mySlots>("my/slots").then(setMySlots).catch(() => {}); api<typeof participation>("my/participation").then(setParticipation).catch(() => {}); if (inviteToken) api(`teams/invitations/${inviteToken}/claim`, { method: "POST" }).then(() => setError("Invite claimed successfully. You are now part of the squad.")).catch((exception) => setError(exception instanceof Error ? exception.message : "Invite could not be claimed.")); return () => { mounted = false; }; }, [authenticated, inviteToken]);
-  const signOut = () => { localStorage.removeItem("dropzone_access"); localStorage.removeItem("dropzone_refresh"); setProfile(null); setAuthenticated(false); setActive("home"); };
-  if (adminRoute && !localStorage.getItem("aag_admin_token")) return <AdminLoginScreen onAuthenticated={() => window.location.reload()} />;
-  if (adminRoute) return <div className="min-h-screen overflow-x-hidden bg-[#101112] px-3 pb-8 pt-4 text-[#F4F4F0] sm:px-5 sm:pt-8"><div className="mx-auto w-full max-w-5xl"><AdminPanel/><button onClick={() => { localStorage.removeItem("aag_admin_token"); window.location.reload(); }} className="mt-5 text-sm text-[#C6F36B]">Sign out organiser dashboard</button></div></div>;
-  if (!authenticated) return <AuthScreen onAuthenticated={(tokens) => { localStorage.setItem("dropzone_access", tokens.access); localStorage.setItem("dropzone_refresh", tokens.refresh); setAuthenticated(true); }} />;
-  if (initialLoading) return <main className="min-h-screen bg-[#101112] px-4 py-6 text-[#F4F4F0]"><div className="mx-auto max-w-2xl"><PlayerAppSkeleton/></div></main>;
-  if (active === "admin" && profile?.user.is_admin) return <div className="min-h-screen overflow-x-hidden bg-[#101112] px-3 pb-8 pt-4 text-[#F4F4F0] sm:px-5 sm:pt-6"><div className="mx-auto w-full max-w-5xl"><AdminPanel/><button onClick={() => setActive("home")} className="mt-5 text-sm text-[#C6F36B]">Back to player app</button></div></div>;
-  if (active === "profile" && profile) return <div className="min-h-screen overflow-x-hidden bg-[#101112] text-[#F4F4F0]"><div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-3 pb-24 pt-4 sm:px-5 sm:pt-6 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:pb-6"><aside className="hidden md:block"><div className="mb-12 text-2xl font-black tracking-tight">AAG <span className="text-[#C6F36B]">eSports</span></div><BottomNav active={active} onChange={setActive}/></aside><main className="min-w-0"><header className="mb-6"><p className="text-[10px] uppercase tracking-[.2em] text-white/40">Player hub</p><h1 className="mt-2 text-2xl font-semibold">Your profile</h1></header><ProfilePanel profile={profile} onSaved={setProfile} onSignOut={signOut}/><a href="/admin" className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#C6F36B]/30 text-sm text-[#C6F36B]"><ShieldCheck size={16}/> Open admin dashboard</a></main><div className="md:hidden"><BottomNav active={active} onChange={setActive}/></div></div></div>;
-  if (selected) return <TournamentDetails tournament={selected} profile={profile!} onBack={() => setSelected(null)} />;
+
+  useEffect(() => {
+    if (!authenticated) {
+      setInitialLoading(false);
+      return;
+    }
+    let mounted = true;
+    api<Tournament[]>("tournaments/?status=upcoming").then(setTournaments).catch(() => {});
+    api<Tournament[]>("tournaments/?status=ongoing").then(setLiveTournaments).catch(() => {});
+    api<any[]>("announcements/").then(setUpdates).catch(() => {});
+    api<UserProfile>("me/")
+      .then(setProfile)
+      .catch(() => {
+        localStorage.removeItem("dropzone_access");
+        setAuthenticated(false);
+      })
+      .finally(() => {
+        if (mounted) setInitialLoading(false);
+      });
+    api<typeof mySlots>("my/slots").then(setMySlots).catch(() => {});
+    api<typeof participation>("my/participation").then(setParticipation).catch(() => {});
+    if (inviteToken)
+      api(`teams/invitations/${inviteToken}/claim`, { method: "POST" })
+        .then(() => setError("Invite claimed successfully. You are now part of the squad."))
+        .catch(exception => setError(exception instanceof Error ? exception.message : "Invite could not be claimed."));
+    return () => {
+      mounted = false;
+    };
+  }, [authenticated, inviteToken]);
+
+  const signOut = () => {
+    localStorage.removeItem("dropzone_access");
+    localStorage.removeItem("dropzone_refresh");
+    setProfile(null);
+    setAuthenticated(false);
+    setActive("home");
+  };
+
+  // Route 1: Admin Route (Protected by admin token)
+  if (adminRoute && !localStorage.getItem("aag_admin_token")) {
+    return <AdminLoginScreen onAuthenticated={() => window.location.reload()} />;
+  }
+  if (adminRoute) {
+    return (
+      <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] px-3 pb-12 pt-6 text-black sm:px-6">
+        <div className="mx-auto w-full max-w-5xl">
+          <AdminPanel />
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem("aag_admin_token");
+              window.location.reload();
+            }}
+            className="neo-ghost mt-6 min-h-11 px-4 text-xs uppercase tracking-wider text-white"
+          >
+            Sign out of Organiser Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Route 2: Not Authenticated Player
+  if (!authenticated) {
+    return (
+      <AuthScreen
+        onAuthenticated={tokens => {
+          localStorage.setItem("dropzone_access", tokens.access);
+          localStorage.setItem("dropzone_refresh", tokens.refresh);
+          setAuthenticated(true);
+        }}
+      />
+    );
+  }
+
+  // Route 3: Initial loading skeleton
+  if (initialLoading) {
+    return (
+      <main className="min-h-screen bg-[#F4EFE6] px-4 py-8 text-black">
+        <div className="mx-auto max-w-2xl">
+          <PlayerAppSkeleton />
+        </div>
+      </main>
+    );
+  }
+
+  // Route 4: Admin mode from within player app
+  if (active === "admin" && profile?.user.is_admin) {
+    return (
+      <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] px-3 pb-12 pt-6 text-black sm:px-6">
+        <div className="mx-auto w-full max-w-5xl">
+          <AdminPanel />
+          <button
+            type="button"
+            onClick={() => setActive("home")}
+            className="neo-solid mt-6 min-h-11 px-4 text-xs uppercase tracking-wider text-black"
+          >
+            Back to Player App
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Route 5: Full Tournament Details View
+  if (selected) {
+    return <TournamentDetails tournament={selected} profile={profile!} onBack={() => setSelected(null)} />;
+  }
+
   const activeParticipation = participation.filter(entry => entry.status === "pending" || entry.status === "confirmed");
   const participatedIds = new Set(activeParticipation.map(entry => entry.tournament_id));
-  return <div className="min-h-screen overflow-x-hidden bg-[#101112] text-[#F4F4F0]"><div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-3 pb-24 pt-4 sm:px-5 sm:pt-6 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:pb-6"><aside className="hidden md:block"><div className="mb-12 text-2xl font-black tracking-tight">  AAG <span className="text-[#C6F36B]">eSports</span></div><BottomNav active={active} onChange={setActive}/></aside><main key={active} className="tab-content min-w-0"><header className="mb-6 flex min-w-0 items-center justify-between gap-3 sm:mb-8"><div className="min-w-0"><p className="truncate text-[10px] uppercase tracking-[.2em] text-white/40 sm:text-xs sm:tracking-[.25em]">Free Fire arena</p><h1 className="mt-2 truncate text-xl font-semibold sm:text-2xl">{active === "home" ? "Ready to drop?" : active[0].toUpperCase()+active.slice(1)}</h1></div>  <button onClick={() => setActive("profile")} aria-label="Open profile" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 p-0.5 text-white/65"><DefaultAvatar name={profile?.user.first_name || profile?.user.username || "Player"} size="sm"/></button></header>{mySlots.length > 0 && <PlayerSlotCard slots={mySlots}/>} {error && <p className="mb-4 rounded-xl bg-red-400/10 p-3 text-sm text-red-300">{error}</p>}{active === "home" && <><section className="mb-6 rounded-3xl bg-[#C6F36B] p-5 text-[#101112] sm:p-6"><div className="mb-8 flex items-center justify-between"><span className="rounded-full bg-[#101112]/10 px-3 py-1 text-xs">SEASON 01</span><Sparkles size={20}/></div><p className="mb-2 text-sm font-medium text-[#101112]/60">Hello, {profile?.user.first_name || profile?.user.username} 👋</p><h2 className="max-w-xs text-[clamp(2rem,9vw,2.25rem)] font-bold leading-tight">Your squad.<br/>Your moment.</h2><p className="mt-3 max-w-xs text-sm leading-5 text-[#101112]/65">Compete, climb the leaderboard, and own the drop.</p></section>  <ParticipationList entries={activeParticipation}/><div className="mb-4 mt-7 flex items-center justify-between gap-3"><h2 className="truncate text-lg font-semibold">Next tournaments</h2><button onClick={() => setActive("tournaments")} className="shrink-0 text-xs text-[#C6F36B]">View all</button></div><div className="space-y-3">{tournaments.slice(0,2).map(t => <TournamentCard key={t.id} tournament={t} participated={participatedIds.has(t.id)} onOpen={() => setSelected(t)}/>)}{!tournaments.length && <div className="rounded-2xl bg-[#191B1D] p-6 text-center text-sm text-white/50">No upcoming tournaments yet.</div>}</div></>}{active === "tournaments" && <div className="space-y-3">{tournaments.map(t => <TournamentCard key={t.id} tournament={t} participated={participatedIds.has(t.id)} onOpen={() => setSelected(t)}/>)}</div>      }{active === "streams" && <LiveStreamsPanel tournaments={liveTournaments}/>}
-  {active === "updates" && <div className="space-y-3">{updates.map(u => <article key={u.id} className="glass-panel rounded-2xl p-4"><p className="text-[10px] uppercase tracking-widest text-[#C6F36B]">{u.kind}</p><h3 className="mt-2 break-words font-semibold">{u.title}</h3><p className="mt-2 text-sm text-white/60">{u.body}</p></article>)}{!updates.length && <div className="rounded-2xl bg-[#191B1D] p-6 text-center text-sm text-white/50">No updates published.</div>}</div>}{active === "profile" && <div className="rounded-2xl bg-[#191B1D] p-4 sm:p-5">{profile ? <><div className="flex items-center gap-3">  <DefaultAvatar name={profile.user.first_name || profile.user.username} size="md"/><div className="min-w-0"><h2 className="truncate font-semibold">{profile.user.username}</h2><p className="text-xs text-[#C6F36B]">{profile.user.player_id}</p></div></div><div className="mt-6 grid grid-cols-2 gap-3"><div className="min-w-0"><p className="text-xs text-white/45">IGN</p><p className="mt-1 truncate">{profile.game_accounts[0]?.ign || "Add IGN"}</p></div><div className="min-w-0"><p className="text-xs text-white/45">UID</p><p className="mt-1 truncate">{profile.game_accounts[0]?.uid || "Add UID"}</p></div></div><button onClick={signOut} className="mt-6 min-h-11 w-full rounded-xl border border-white/10 text-sm text-white/60">Sign out</button></> : null}</div>}</main><div className="md:hidden"><BottomNav active={active} onChange={setActive}/></div></div></div>;
+
+  // Route 6: Main App View with Navigation
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] text-black">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 pb-24 pt-4 sm:px-6 sm:pt-6 md:grid md:grid-cols-[240px_minmax(0,1fr)] md:pb-8">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:block">
+          <div className="mb-8 border-[3px] border-black bg-[#C6F36B] p-4 shadow-[4px_4px_0px_#000000]">
+            <p className="text-xl font-black tracking-tight text-black">
+              AAG <span className="bg-black text-[#C6F36B] px-1.5">eSports</span>
+            </p>
+            <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-black/70">
+              Free Fire Arena
+            </p>
+          </div>
+          <BottomNav active={active} onChange={setActive} />
+        </aside>
+
+        {/* Main Content Area */}
+        <main key={active} className="tab-content min-w-0">
+          {/* Header */}
+          <header className="mb-6 flex min-w-0 items-center justify-between gap-3 border-b-2 border-black pb-4 sm:mb-8">
+            <div className="min-w-0">
+              <span className="neo-badge">FREE FIRE ARENA</span>
+              <h1 className="mt-2 truncate text-2xl font-black uppercase tracking-tight text-black sm:text-3xl">
+                {active === "home" ? "Ready to drop?" : active.toUpperCase()}
+              </h1>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setActive("profile")}
+              aria-label="Open profile"
+              className="transition-transform hover:scale-105 active:scale-95"
+            >
+              <DefaultAvatar name={profile?.user.first_name || profile?.user.username || "Player"} size="md" />
+            </button>
+          </header>
+
+          {/* Custom Room Slot Alert if player is assigned */}
+          {mySlots.length > 0 && <PlayerSlotCard slots={mySlots} />}
+
+          <Toast message={error} tone="error" />
+
+          {/* TAB: HOME */}
+          {active === "home" && (
+            <>
+              {/* Neo Brutalist Hero Banner */}
+              <section className="neo mb-6 border-[3px] border-black bg-[#C6F36B] p-6 text-black shadow-[6px_6px_0px_#000000] sm:p-8">
+                <div className="mb-6 flex items-center justify-between">
+                  <span className="border-2 border-black bg-black px-3 py-1 text-xs font-black uppercase tracking-widest text-[#C6F36B]">
+                    SEASON 01 TOURNAMENTS
+                  </span>
+                  <Sparkles size={24} strokeWidth={2.5} />
+                </div>
+                <p className="mb-2 text-xs font-black uppercase tracking-wider text-black/70">
+                  Welcome, {profile?.user.first_name || profile?.user.username} 👋
+                </p>
+                <h2 className="max-w-md text-3xl font-black leading-tight sm:text-4xl uppercase tracking-tight">
+                  Your Squad.<br />Your Moment.
+                </h2>
+                <p className="mt-3 max-w-sm text-xs font-bold leading-relaxed text-black/75 sm:text-sm">
+                  Register your squad, claim custom room slots, and compete for verified prize pools.
+                </p>
+              </section>
+
+              {/* Player's active tournaments */}
+              <ParticipationList entries={activeParticipation} />
+
+              {/* Next upcoming tournaments */}
+              <div className="mb-4 mt-8 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Trophy size={20} strokeWidth={2.5} />
+                  <h2 className="text-xl font-black uppercase tracking-tight text-black">Upcoming Tournaments</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActive("tournaments")}
+                  className="neo-solid min-h-8 px-3 text-xs font-black uppercase tracking-wider text-black"
+                >
+                  View All →
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {tournaments.slice(0, 3).map(tournament => (
+                  <TournamentCard
+                    key={tournament.id}
+                    tournament={tournament}
+                    participated={participatedIds.has(tournament.id)}
+                    onOpen={() => setSelected(tournament)}
+                  />
+                ))}
+                {!tournaments.length && (
+                  <div className="neo p-8 text-center text-sm font-black uppercase text-black/50">
+                    No upcoming tournaments scheduled yet.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* TAB: TOURNAMENTS */}
+          {active === "tournaments" && (
+            <div className="space-y-4">
+              {tournaments.map(tournament => (
+                <TournamentCard
+                  key={tournament.id}
+                  tournament={tournament}
+                  participated={participatedIds.has(tournament.id)}
+                  onOpen={() => setSelected(tournament)}
+                />
+              ))}
+              {!tournaments.length && (
+                <div className="neo p-8 text-center text-sm font-black uppercase text-black/50">
+                  No tournaments available.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: STREAMS */}
+          {active === "streams" && <LiveStreamsPanel tournaments={liveTournaments} />}
+
+          {/* TAB: UPDATES */}
+          {active === "updates" && (
+            <div className="space-y-4">
+              {updates.map(update => (
+                <article key={update.id} className="neo p-5">
+                  <span className="neo-badge">{update.kind}</span>
+                  <h3 className="mt-2 text-lg font-black uppercase tracking-tight text-black">{update.title}</h3>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-black/75">{update.body}</p>
+                </article>
+              ))}
+              {!updates.length && (
+                <div className="neo p-8 text-center text-sm font-black uppercase text-black/50">
+                  No community updates posted yet.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: PROFILE */}
+          {active === "profile" && profile && (
+            <div className="space-y-6">
+              <ProfilePanel profile={profile} onSaved={setProfile} onSignOut={signOut} />
+              {profile.user.is_admin && (
+                <a
+                  href="/admin"
+                  className="neo-solid flex min-h-12 w-full items-center justify-center gap-2 text-xs uppercase tracking-wider text-black"
+                >
+                  <ShieldCheck size={18} strokeWidth={2.5} /> Open Organiser Dashboard
+                </a>
+              )}
+            </div>
+          )}
+        </main>
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden">
+          <BottomNav active={active} onChange={setActive} />
+        </div>
+      </div>
+    </div>
+  );
 }

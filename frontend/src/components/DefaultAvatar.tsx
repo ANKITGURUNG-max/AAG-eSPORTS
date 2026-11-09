@@ -1,13 +1,36 @@
-const avatarColors = ["#C6F36B", "#8ED1FC", "#F7A8B8", "#D7B5F8", "#F6C667", "#8DE0C2"];
+const avatarColors = [
+  "#C6F36B", // Electric Lime
+  "#FFE600", // Bright Yellow
+  "#FF6B6B", // Coral Red
+  "#4ECDC4", // Teal
+  "#A8E6CF", // Mint
+  "#FFD93D", // Gold
+  "#6C5CE7", // Purple
+  "#FFA502", // Orange
+];
 
 function colorFor(value: string) {
-  return [...value].reduce((total, character) => total + character.charCodeAt(0), 0) % avatarColors.length;
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash) % avatarColors.length;
 }
 
 export function DefaultAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
   const sizes = { sm: "h-9 w-9", md: "h-12 w-12", lg: "h-16 w-16" };
-  return <div aria-label={`${name || "Player"} default profile`} className={`default-avatar relative shrink-0 overflow-hidden rounded-full ${sizes[size]}`} style={{ backgroundColor: avatarColors[colorFor(name || "player")] }}>
-    <span className="absolute left-1/2 top-[18%] h-[34%] w-[34%] -translate-x-1/2 rounded-full bg-white/90"/>
-    <span className="absolute bottom-[-8%] left-1/2 h-[54%] w-[72%] -translate-x-1/2 rounded-[50%_50%_0_0] bg-white/90"/>
-  </div>;
+  const initials = (name || "P").slice(0, 2).toUpperCase();
+
+  return (
+    <div
+      aria-label={`${name || "Player"} profile avatar`}
+      className={`default-avatar grid shrink-0 place-items-center border-[3px] border-black text-black font-black select-none ${sizes[size]}`}
+      style={{ backgroundColor: avatarColors[colorFor(name || "player")] }}
+    >
+      <span className={size === "lg" ? "text-xl tracking-tighter" : size === "md" ? "text-base tracking-tighter" : "text-xs tracking-tighter"}>
+        {initials}
+      </span>
+    </div>
+  );
 }
