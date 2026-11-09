@@ -409,24 +409,24 @@ export function AdminPanel() {
             <button
               type="button"
               onClick={() => setActiveTab("overview")}
-              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all ${
+              className={`min-h-11 border-2 px-1.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-tight sm:tracking-wider transition-all truncate ${
                 activeTab === "overview"
                   ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
                   : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
               }`}
             >
-              Overview & Roster
+              <span className="hidden sm:inline">Overview & </span>Roster
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("manage")}
-              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all ${
+              className={`min-h-11 border-2 px-1.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-tight sm:tracking-wider transition-all truncate ${
                 activeTab === "manage"
                   ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
                   : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
               }`}
             >
-              Manage Tournaments
+              Tournaments
             </button>
             <button
               type="button"
