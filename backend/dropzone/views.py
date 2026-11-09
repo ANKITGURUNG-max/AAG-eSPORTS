@@ -438,7 +438,8 @@ def my_tournament_slots(request):
 @permission_classes([permissions.IsAuthenticated])
 def my_participation(request):
     registrations = Registration.objects.filter(
-        team__members__user=request.user
+        team__members__user=request.user,
+        status__in=["pending", "confirmed"],
     ).select_related("tournament", "team", "slot").distinct().order_by("-submitted_at")
     return Response([{
         "tournament_id": registration.tournament_id,

@@ -187,6 +187,18 @@ class TournamentTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, [])
 
+    def test_cancelled_registration_is_not_returned_in_participation_history(self):
+        team = Team.objects.create(name="Cancelled history squad", captain=self.user)
+        TeamMember.objects.create(team=team, user=self.user, role="captain")
+        Registration.objects.create(tournament=self.tournament, team=team, status="cancelled")
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.get("/api/my/participation")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, [])
+
     @override_settings(ADMIN_SESSION_MAX_AGE=3600)
     def test_admin_can_verify_pending_payment(self):
         team = Team.objects.create(name="Test squad", captain=self.user)
