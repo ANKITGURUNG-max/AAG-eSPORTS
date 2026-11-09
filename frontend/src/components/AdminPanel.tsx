@@ -3,6 +3,7 @@ import { CheckCircle2, CreditCard, Megaphone, Plus, Save, ShieldCheck, Trash2, U
 import { api } from "../lib/api";
 import { AdminPanelSkeleton } from "./Skeletons";
 import { Toast } from "./Toast";
+import { ThemeToggle } from "./ThemeToggle";
 
 type Payment = {
   id: number;
@@ -349,12 +350,15 @@ export function AdminPanel() {
             </h2>
           </div>
         </div>
-        <a
-          href="/"
-          className="neo-ghost inline-flex min-h-10 items-center px-4 text-xs font-black uppercase tracking-wider text-white"
-        >
-          Open Player App →
-        </a>
+        <div className="flex items-center gap-2.5">
+          <ThemeToggle />
+          <a
+            href="/"
+            className="neo-ghost inline-flex min-h-10 items-center px-4 text-xs font-black uppercase tracking-wider text-white"
+          >
+            Open Player App →
+          </a>
+        </div>
       </div>
 
       <Toast message={loadError} tone="error" />

@@ -1,7 +1,8 @@
-import { ChevronLeft, Trophy, DollarSign, Calendar, ShieldAlert } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { RegistrationPanel } from "./RegistrationPanel";
 import type { Tournament } from "./TournamentCard";
 import type { UserProfile } from "./ProfilePanel";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function TournamentDetails({
   tournament,
@@ -13,16 +14,19 @@ export function TournamentDetails({
   onBack: () => void;
 }) {
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#F4EFE6] px-4 pb-12 pt-6 text-black sm:px-6 sm:pt-8">
+    <main className="min-h-screen overflow-x-hidden bg-[#F4EFE6] dark:bg-[#0D0E12] px-4 pb-12 pt-6 text-black dark:text-white transition-colors duration-150 sm:px-6 sm:pt-8">
       <div className="mx-auto max-w-4xl">
-        <button
-          type="button"
-          onClick={onBack}
-          className="neo-ghost mb-6 inline-flex min-h-11 items-center gap-2 px-4 text-xs font-black uppercase tracking-wider text-white"
-        >
-          <ChevronLeft size={18} strokeWidth={3} />
-          Back to tournaments
-        </button>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="neo-ghost inline-flex min-h-11 items-center gap-2 px-4 text-xs font-black uppercase tracking-wider text-white"
+          >
+            <ChevronLeft size={18} strokeWidth={3} />
+            Back to tournaments
+          </button>
+          <ThemeToggle />
+        </div>
 
         {/* Title Header Card */}
         <section className="neo mb-6 p-6 sm:p-8">

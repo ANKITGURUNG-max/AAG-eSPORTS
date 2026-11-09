@@ -15,6 +15,12 @@
 html {
   background-color: #f4efe6;
   color: #000000;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+html.dark {
+  background-color: #0d0e12;
+  color: #ffffff;
 }
 
 body {
@@ -24,6 +30,11 @@ body {
   background-color: #f4efe6;
   color: #000000;
   -webkit-font-smoothing: antialiased;
+}
+
+body.dark {
+  background-color: #0d0e12;
+  color: #ffffff;
 }
 
 button, input, select, textarea {
@@ -37,7 +48,7 @@ button {
 }
 
 /* ----------------------------------------------------
-   NEO-BRUTALISM CORE UTILITIES
+   NEO-BRUTALISM CORE UTILITIES (LIGHT & DARK MODES)
    ---------------------------------------------------- */
 
 /* Standard Neo card */
@@ -47,6 +58,14 @@ button {
   background-color: #ffffff;
   color: #000000;
   box-shadow: 4px 4px 0px 0px #000000;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dark .neo {
+  border: 3px solid #000000;
+  background-color: #1a1c23;
+  color: #ffffff;
+  box-shadow: 4px 4px 0px 0px #c6f36b;
 }
 
 /* Neo card with primary Lime accent */
@@ -57,7 +76,7 @@ button {
   color: #000000;
   box-shadow: 4px 4px 0px 0px #000000;
   font-weight: 800;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
 }
 
 .neo-solid:hover:not(:disabled) {
@@ -70,14 +89,22 @@ button {
   box-shadow: 0px 0px 0px 0px #000000;
 }
 
-/* Dark Neo card */
+.dark .neo-solid {
+  box-shadow: 4px 4px 0px 0px #ffffff;
+}
+
+.dark .neo-solid:hover:not(:disabled) {
+  box-shadow: 5px 5px 0px 0px #ffffff;
+}
+
+/* Dark / Inverted Neo card */
 .neo-ghost {
   border: 3px solid #000000;
   border-radius: 0;
   background-color: #000000;
   color: #ffffff;
   box-shadow: 4px 4px 0px 0px #000000;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
 }
 
 .neo-ghost:hover:not(:disabled) {
@@ -90,6 +117,17 @@ button {
   box-shadow: 0px 0px 0px 0px #000000;
 }
 
+.dark .neo-ghost {
+  border: 3px solid #c6f36b;
+  background-color: #000000;
+  color: #ffffff;
+  box-shadow: 4px 4px 0px 0px #c6f36b;
+}
+
+.dark .neo-ghost:hover:not(:disabled) {
+  box-shadow: 5px 5px 0px 0px #c6f36b;
+}
+
 /* Yellow Accent card / button */
 .neo-accent {
   border: 3px solid #000000;
@@ -98,7 +136,7 @@ button {
   color: #000000;
   box-shadow: 4px 4px 0px 0px #000000;
   font-weight: 800;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
 }
 
 .neo-accent:hover:not(:disabled) {
@@ -111,6 +149,14 @@ button {
   box-shadow: 0px 0px 0px 0px #000000;
 }
 
+.dark .neo-accent {
+  box-shadow: 4px 4px 0px 0px #ffffff;
+}
+
+.dark .neo-accent:hover:not(:disabled) {
+  box-shadow: 5px 5px 0px 0px #ffffff;
+}
+
 /* Coral / Red Alert card / button */
 .neo-danger {
   border: 3px solid #000000;
@@ -119,7 +165,7 @@ button {
   color: #ffffff;
   box-shadow: 4px 4px 0px 0px #000000;
   font-weight: 800;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
 }
 
 .neo-danger:hover:not(:disabled) {
@@ -130,6 +176,10 @@ button {
 .neo-danger:active:not(:disabled) {
   transform: translate(4px, 4px);
   box-shadow: 0px 0px 0px 0px #000000;
+}
+
+.dark .neo-danger {
+  box-shadow: 4px 4px 0px 0px #ffffff;
 }
 
 /* Neo Brutalist Inputs */
@@ -145,7 +195,7 @@ button {
   font-weight: 700;
   font-size: 0.875rem;
   box-shadow: 3px 3px 0px 0px #000000;
-  transition: box-shadow 0.1s ease, border-color 0.1s ease;
+  transition: box-shadow 0.1s ease, border-color 0.1s ease, background-color 0.15s ease;
 }
 
 .neo-input::placeholder, .auth-input::placeholder {
@@ -155,6 +205,22 @@ button {
 
 .neo-input:focus, .auth-input:focus {
   border-color: #000000;
+  box-shadow: 4px 4px 0px 0px #c6f36b;
+}
+
+.dark .neo-input, .dark .auth-input {
+  background-color: #1a1c23;
+  color: #ffffff;
+  border: 3px solid #000000;
+  box-shadow: 3px 3px 0px 0px #c6f36b;
+}
+
+.dark .neo-input::placeholder, .dark .auth-input::placeholder {
+  color: #9ca3af;
+}
+
+.dark .neo-input:focus, .dark .auth-input:focus {
+  border-color: #c6f36b;
   box-shadow: 4px 4px 0px 0px #c6f36b;
 }
 
@@ -175,6 +241,17 @@ select.neo-input option, select.auth-input option {
   font-weight: 700;
 }
 
+.dark select.neo-input, .dark select.auth-input {
+  background-color: #1a1c23;
+  color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c6f36b' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.dark select.neo-input option, .dark select.auth-input option {
+  background-color: #1a1c23;
+  color: #ffffff;
+}
+
 /* Badges */
 .neo-badge {
   display: inline-flex;
@@ -192,6 +269,10 @@ select.neo-input option, select.auth-input option {
   box-shadow: 2px 2px 0px 0px #000000;
 }
 
+.dark .neo-badge {
+  box-shadow: 2px 2px 0px 0px #ffffff;
+}
+
 /* Skeletons */
 .skeleton {
   background: linear-gradient(100deg, #ffffff 20%, #e2ded5 40%, #ffffff 60%);
@@ -199,6 +280,12 @@ select.neo-input option, select.auth-input option {
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
   border: 3px solid #000000;
   box-shadow: 3px 3px 0px 0px #000000;
+}
+
+.dark .skeleton {
+  background: linear-gradient(100deg, #1a1c23 20%, #292d38 40%, #1a1c23 60%);
+  border: 3px solid #000000;
+  box-shadow: 3px 3px 0px 0px #c6f36b;
 }
 
 @keyframes skeleton-shimmer {
@@ -226,6 +313,10 @@ select.neo-input option, select.auth-input option {
   border: 3px solid #000000;
   border-radius: 0;
   box-shadow: 3px 3px 0px 0px #000000;
+}
+
+.dark .default-avatar {
+  box-shadow: 3px 3px 0px 0px #c6f36b;
 }
 
 .safe-bottom {

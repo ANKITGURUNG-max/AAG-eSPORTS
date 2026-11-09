@@ -12,6 +12,7 @@ import { DefaultAvatar } from "./components/DefaultAvatar";
 import { PlayerAppSkeleton } from "./components/Skeletons";
 import { LiveStreamsPanel } from "./components/LiveStreamsPanel";
 import { Toast } from "./components/Toast";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: string; refresh: string }) => void }) {
   const [mode, setMode] = useState<"register" | "login">("register");
@@ -62,8 +63,11 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: s
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F4EFE6] px-4 py-8 text-black sm:px-6">
+    <main className="flex min-h-screen items-center justify-center bg-[#F4EFE6] dark:bg-[#0D0E12] px-4 py-8 text-black dark:text-white sm:px-6">
       <div className="w-full max-w-md">
+        <div className="mb-4 flex justify-end">
+          <ThemeToggle />
+        </div>
         {/* Brand Header */}
         <div className="mb-6 text-center">
           <div className="inline-block border-[3px] border-black bg-[#C6F36B] px-4 py-1.5 shadow-[4px_4px_0px_#000000]">
@@ -258,8 +262,12 @@ function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) 
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F4EFE6] px-4 text-black">
-      <form onSubmit={submit} className="neo w-full max-w-sm p-6 sm:p-8 shadow-[6px_6px_0px_#000000]">
+    <main className="flex min-h-screen items-center justify-center bg-[#F4EFE6] dark:bg-[#0D0E12] px-4 text-black dark:text-white">
+      <div className="w-full max-w-sm">
+        <div className="mb-4 flex justify-end">
+          <ThemeToggle />
+        </div>
+        <form onSubmit={submit} className="neo w-full p-6 sm:p-8 shadow-[6px_6px_0px_#000000]">
         <span className="neo-badge">ORGANISER VERIFICATION</span>
         <h1 className="mt-3 text-2xl font-black uppercase tracking-tight text-black">Admin Access</h1>
         <p className="mt-1 text-xs font-bold text-black/60">
@@ -296,8 +304,9 @@ function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) 
           {loading ? "Verifying..." : "Unlock Organiser Dashboard"}
         </button>
       </form>
-    </main>
-  );
+    </div>
+  </main>
+);
 }
 
 export default function App() {
@@ -361,7 +370,7 @@ export default function App() {
   }
   if (adminRoute) {
     return (
-      <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] px-3 pb-12 pt-6 text-black sm:px-6">
+      <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] dark:bg-[#0D0E12] px-3 pb-12 pt-6 text-black dark:text-white sm:px-6">
         <div className="mx-auto w-full max-w-5xl">
           <AdminPanel />
           <button
@@ -395,7 +404,7 @@ export default function App() {
   // Route 3: Initial loading skeleton
   if (initialLoading) {
     return (
-      <main className="min-h-screen bg-[#F4EFE6] px-4 py-8 text-black">
+      <main className="min-h-screen bg-[#F4EFE6] dark:bg-[#0D0E12] px-4 py-8 text-black dark:text-white">
         <div className="mx-auto max-w-2xl">
           <PlayerAppSkeleton />
         </div>
@@ -406,7 +415,7 @@ export default function App() {
   // Route 4: Admin mode from within player app
   if (active === "admin" && profile?.user.is_admin) {
     return (
-      <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] px-3 pb-12 pt-6 text-black sm:px-6">
+      <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] dark:bg-[#0D0E12] px-3 pb-12 pt-6 text-black dark:text-white sm:px-6">
         <div className="mx-auto w-full max-w-5xl">
           <AdminPanel />
           <button
@@ -431,7 +440,7 @@ export default function App() {
 
   // Route 6: Main App View with Navigation
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] text-black">
+    <div className="min-h-screen overflow-x-hidden bg-[#F4EFE6] dark:bg-[#0D0E12] text-black dark:text-white transition-colors duration-150">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 pb-24 pt-4 sm:px-6 sm:pt-6 md:grid md:grid-cols-[240px_minmax(0,1fr)] md:pb-8">
         {/* Desktop Sidebar */}
         <aside className="hidden md:block">
@@ -452,19 +461,22 @@ export default function App() {
           <header className="mb-6 flex min-w-0 items-center justify-between gap-3 border-b-2 border-black pb-4 sm:mb-8">
             <div className="min-w-0">
               <span className="neo-badge">FREE FIRE ARENA</span>
-              <h1 className="mt-2 truncate text-2xl font-black uppercase tracking-tight text-black sm:text-3xl">
+              <h1 className="mt-2 truncate text-2xl font-black uppercase tracking-tight text-black dark:text-white sm:text-3xl">
                 {active === "home" ? "Ready to drop?" : active.toUpperCase()}
               </h1>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setActive("profile")}
-              aria-label="Open profile"
-              className="transition-transform hover:scale-105 active:scale-95"
-            >
-              <DefaultAvatar name={profile?.user.first_name || profile?.user.username || "Player"} size="md" />
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <ThemeToggle />
+              <button
+                type="button"
+                onClick={() => setActive("profile")}
+                aria-label="Open profile"
+                className="transition-transform hover:scale-105 active:scale-95"
+              >
+                <DefaultAvatar name={profile?.user.first_name || profile?.user.username || "Player"} size="md" />
+              </button>
+            </div>
           </header>
 
           {/* Custom Room Slot Alert if player is assigned */}
