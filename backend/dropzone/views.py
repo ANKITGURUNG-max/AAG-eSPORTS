@@ -197,6 +197,7 @@ class TeamViewSet(viewsets.ModelViewSet):
         return Response({"team_id": team.id, "members": identifiers, "pending_invites": registration.invitations.filter(status="pending").count()})
 
     @action(detail=True, methods=["post"])
+    @transaction.atomic
     def retract(self, request, pk=None):
         team = self.get_object()
         if team.captain_id != request.user.id:
@@ -286,6 +287,8 @@ class AdminPaymentViewSet(viewsets.ViewSet):
                 registration = Registration.objects.select_for_update().get(pk=payment.registration_id)
                 if payment.status in ("cancelled", "refunded", "failed"):
                     return Response({"detail": f"This payment cannot be approved because it is {payment.status}."}, status=status.HTTP_400_BAD_REQUEST)
+                if registration.cancellation_requested:
+                    return Response({"detail": "This registration has a pending cancellation request."}, status=status.HTTP_400_BAD_REQUEST)
                 if registration.status == "confirmed" and registration.slot_id:
                     return Response({"status": "verified", "slot": TournamentSlot.objects.get(pk=registration.slot_id).number})
                 if not TeamMember.objects.filter(team_id=registration.team_id).exists():
