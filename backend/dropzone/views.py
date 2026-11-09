@@ -9,7 +9,7 @@ import logging
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -400,6 +400,19 @@ def admin_delete_player(request, player_id):
     if Team.objects.filter(captain=player).exists() or TeamMember.objects.filter(user=player).exists():
         return Response({"detail": "This player is linked to a team or registration and cannot be deleted until those records are resolved."}, status=status.HTTP_409_CONFLICT)
     player.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(["DELETE"])
+@authentication_classes([AdminAuthentication])
+@permission_classes([IsAdmin])
+def admin_delete_announcement(request, announcement_id):
+    try:
+        announcement = Announcement.objects.get(pk=announcement_id)
+    except Announcement.DoesNotExist:
+        return Response({"detail": "Announcement not found."}, status=status.HTTP_404_NOT_FOUND)
+    announcement.delete()
+    if request.user.is_authenticated:
+        AuditLog.objects.create(actor=request.user, action="delete_announcement", entity="Announcement", entity_id=str(announcement_id))
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(["GET"])

@@ -291,6 +291,13 @@ export function AdminPanel() {
     try {
       await api(`admin/announcements/${id}/`, { method: "DELETE" });
       setAnnouncementsList(current => current.filter(item => item.id !== id));
+      try {
+        const cachedUpdates = localStorage.getItem("aag_cache_updates");
+        if (cachedUpdates) {
+          const list = JSON.parse(cachedUpdates);
+          localStorage.setItem("aag_cache_updates", JSON.stringify(list.filter((item: any) => item.id !== id)));
+        }
+      } catch {}
       setMessage("Announcement deleted successfully.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not delete announcement.");

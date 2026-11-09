@@ -37,6 +37,10 @@ def register(request):
 
 urlpatterns = [
     path("health", health_check),
+    path("admin/announcements/<int:announcement_id>", admin_delete_announcement),
+    path("admin/announcements/<int:announcement_id>/", admin_delete_announcement),
+    path("announcements/<int:announcement_id>", admin_delete_announcement),
+    path("announcements/<int:announcement_id>/", admin_delete_announcement),
     path("", include(router.urls)),
     path("auth/register", register),
     path("auth/login", TokenObtainPairView.as_view(serializer_class=PlayerTokenObtainPairSerializer)),
