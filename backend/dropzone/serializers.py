@@ -141,3 +141,13 @@ class TeamCreateSerializer(serializers.Serializer):
         if captain.player_id.upper() not in identifiers and not captain.game_accounts.filter(game="free_fire", uid__in=identifiers).exists():
             raise serializers.ValidationError("The captain's own Free Fire UID must be included.")
         return attrs
+
+class NotificationSerializer(serializers.ModelSerializer):
+    is_read = serializers.SerializerMethodField()
+    def get_is_read(self, obj):
+        return obj.read_at is not None
+
+    class Meta:
+        model = Notification
+        fields = ["id", "title", "body", "read_at", "is_read", "created_at"]
+

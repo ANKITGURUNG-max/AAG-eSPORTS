@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Flame } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Flame, Bell as BellIcon } from "lucide-react";
 import { adminLogin, api, login, register } from "./lib/api";
 import { BottomNav } from "./components/BottomNav";
 import { Tournament, TournamentCard } from "./components/TournamentCard";
@@ -13,6 +13,9 @@ import { PlayerAppSkeleton } from "./components/Skeletons";
 import { LiveStreamsPanel } from "./components/LiveStreamsPanel";
 import { Toast } from "./components/Toast";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { NotificationsModal } from "./components/NotificationsModal";
+import { FriendsPanel } from "./components/FriendsPanel";
+import { SquadPanel } from "./components/SquadPanel";
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: string; refresh: string }) => void }) {
   const [mode, setMode] = useState<"register" | "login">("register");
@@ -311,6 +314,8 @@ function AdminLoginScreen({ onAuthenticated }: { onAuthenticated: () => void }) 
 
 export default function App() {
   const [active, setActive] = useState("home");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [tournaments, setTournaments] = useState<Tournament[]>(() => {
     try {
       const cached = localStorage.getItem("aag_cache_tournaments");
@@ -416,6 +421,12 @@ export default function App() {
         if (!mounted) return;
         setParticipation(data);
         try { localStorage.setItem("aag_cache_participation", JSON.stringify(data)); } catch {}
+      })
+      .catch(() => {});
+    api<{ unread_count: number }>("notifications/unread-count/")
+      .then(data => {
+        if (!mounted) return;
+        setUnreadCount(data.unread_count);
       })
       .catch(() => {});
     if (inviteToken)
@@ -532,11 +543,30 @@ export default function App() {
             <div className="min-w-0">
               <span className="neo-badge">AAG eSports</span>
               <h1 className="mt-2 truncate text-2xl font-black uppercase tracking-tight text-black dark:text-white sm:text-3xl">
-                {active === "home" ? "Ready to drop?" : active.toUpperCase()}
+                {active === "home"
+                  ? "Ready to drop?"
+                  : active === "squad"
+                  ? "My Squad"
+                  : active === "friends"
+                  ? "Find & Friends"
+                  : active.toUpperCase()}
               </h1>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen(true)}
+                aria-label="View notifications"
+                className="relative border-2 border-black bg-white dark:bg-[#1a1c23] p-2 text-black dark:text-white shadow-[2px_2px_0px_#000000] hover:bg-[#F4EFE6] dark:hover:bg-[#252836] transition-transform active:scale-95"
+              >
+                <BellIcon size={18} strokeWidth={2.5} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 border border-black bg-[#FF4757] text-white text-[9px] font-black w-4 h-4 grid place-items-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
               <ThemeToggle />
               <button
                 type="button"
@@ -548,6 +578,16 @@ export default function App() {
               </button>
             </div>
           </header>
+
+          {/* Notifications Modal */}
+          <NotificationsModal
+            isOpen={notificationsOpen}
+            onClose={() => {
+              setNotificationsOpen(false);
+              api<{ unread_count: number }>("notifications/unread-count/").then(d => setUnreadCount(d.unread_count)).catch(() => {});
+            }}
+            onNavigate={tab => setActive(tab)}
+          />
 
           {/* Custom Room Slot Alert if player is assigned */}
           {mySlots.length > 0 && <PlayerSlotCard slots={mySlots} />}
@@ -629,6 +669,16 @@ export default function App() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* TAB: SQUAD */}
+          {active === "squad" && (
+            <SquadPanel onNavigateToTournaments={() => setActive("tournaments")} />
+          )}
+
+          {/* TAB: FRIENDS */}
+          {active === "friends" && (
+            <FriendsPanel />
           )}
 
           {/* TAB: STREAMS */}

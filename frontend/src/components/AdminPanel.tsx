@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, CreditCard, Megaphone, Plus, Save, ShieldCheck, Trash2, Users, Video, XCircle } from "lucide-react";
+import { CheckCircle2, CreditCard, Megaphone, Plus, Save, ShieldCheck, Trash2, Users, Video, XCircle, Shield, Link2, UserCheck } from "lucide-react";
 import { api } from "../lib/api";
 import { AdminPanelSkeleton } from "./Skeletons";
 import { Toast } from "./Toast";
@@ -48,6 +48,36 @@ type Player = {
   is_active: boolean;
   date_joined: string;
   game_account: { ign: string; uid: string; game: string } | null;
+};
+
+type AdminSquad = {
+  id: number;
+  name: string;
+  squad_id: string;
+  is_active: boolean;
+  captain: { id: number; username: string; player_id: string };
+  member_count: number;
+  members: { id: number; username: string; player_id: string; role: string; ign: string; uid: string }[];
+  created_at: string;
+};
+
+type AdminConnections = {
+  friendships: {
+    id: number;
+    type: string;
+    status: string;
+    user1: { id: number; username: string; player_id: string; ign: string; uid: string };
+    user2: { id: number; username: string; player_id: string; ign: string; uid: string };
+    created_at: string;
+  }[];
+  pending_requests: {
+    id: number;
+    type: string;
+    status: string;
+    sender: { id: number; username: string; player_id: string; ign: string; uid: string };
+    receiver: { id: number; username: string; player_id: string; ign: string; uid: string };
+    created_at: string;
+  }[];
 };
 
 const emptyTournament = {
@@ -188,7 +218,9 @@ export function AdminPanel() {
   const [tournamentForm, setTournamentForm] = useState(emptyTournament);
   const [announcement, setAnnouncement] = useState({ kind: "tournament", title: "", body: "", published: true });
   const [announcementsList, setAnnouncementsList] = useState<{ id: number; kind: string; title: string; body: string; created_at: string }[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview" | "manage" | "payments" | "players">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "manage" | "payments" | "players" | "squads" | "connections">("overview");
+  const [adminSquads, setAdminSquads] = useState<AdminSquad[]>([]);
+  const [adminConnections, setAdminConnections] = useState<AdminConnections | null>(null);
   const [rosterMenuOpen, setRosterMenuOpen] = useState(false);
   const [message, setMessage] = useState("");
   useEffect(() => {
@@ -214,6 +246,8 @@ export function AdminPanel() {
         if (!selectedTournament && data[0]) setSelectedTournament(String(data[0].id));
       }),
       api<any[]>("admin/announcements/").then(setAnnouncementsList).catch(() => {}),
+      api<AdminSquad[]>("admin/squads/").then(setAdminSquads).catch(() => {}),
+      api<AdminConnections>("admin/connections/").then(setAdminConnections).catch(() => {}),
     ])
       .catch(error => setLoadError(error instanceof Error ? error.message : "Could not load organiser data."))
       .finally(() => setLoading(false));
@@ -412,7 +446,7 @@ export function AdminPanel() {
           )}
 
           {/* Navigation Tabs */}
-          <div className="neo p-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          <div className="neo p-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
             <button
               type="button"
               onClick={() => setActiveTab("overview")}
@@ -463,6 +497,30 @@ export function AdminPanel() {
             >
               <Users size={15} strokeWidth={2.5} />
               <span>Players ({players.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("squads")}
+              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "squads"
+                  ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                  : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
+              }`}
+            >
+              <Shield size={15} strokeWidth={2.5} />
+              <span>Squads ({adminSquads.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("connections")}
+              className={`min-h-11 border-2 p-2 text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === "connections"
+                  ? "border-black bg-[#C6F36B] text-black shadow-[3px_3px_0px_#000000]"
+                  : "border-transparent text-black dark:text-white hover:border-black dark:hover:border-white/30 hover:bg-[#F4EFE6] dark:hover:bg-[#252836]"
+              }`}
+            >
+              <Link2 size={15} strokeWidth={2.5} />
+              <span>Connections</span>
             </button>
           </div>
 
@@ -931,6 +989,177 @@ export function AdminPanel() {
                   No registered player records found.
                 </div>
               )}
+            </section>
+          )}
+
+          {/* TAB: SQUADS */}
+          {activeTab === "squads" && (
+            <section className="neo p-5 sm:p-6">
+              <div className="mb-5 flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-4">
+                <div className="flex items-center gap-2">
+                  <Shield size={20} strokeWidth={2.5} />
+                  <h3 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">Active Squads & Rosters</h3>
+                </div>
+                <span className="neo-badge">{adminSquads.length} Total Squads</span>
+              </div>
+
+              <div className="space-y-4">
+                {adminSquads.map(s => (
+                  <div key={s.id} className="neo p-5 bg-white dark:bg-[#1a1c23] border-[3px] border-black space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/10 dark:border-white/10 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-lg font-black uppercase text-black dark:text-white">{s.name}</h4>
+                          <span className="border-2 border-black bg-[#C6F36B] px-2 py-0.5 text-xs font-mono font-black text-black">
+                            {s.squad_id}
+                          </span>
+                          <span className={`border border-black px-2 py-0.5 text-[10px] font-black uppercase ${s.is_active ? "bg-[#C6F36B] text-black" : "bg-[#FF4D4D] text-white"}`}>
+                            {s.is_active ? "Active" : "Disbanded"}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs font-bold text-black/60 dark:text-white/60">
+                          Captain: <span className="text-black dark:text-white font-black">{s.captain.username}</span> ({s.captain.player_id}) · Formed: {new Date(s.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="border-2 border-black bg-black px-3 py-1 text-xs font-black text-white">
+                        {s.members.length}/4 PLAYERS
+                      </span>
+                    </div>
+
+                    {/* Member Rosters */}
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {s.members.map((m, idx) => (
+                        <div key={m.id} className="border-2 border-black p-3 bg-zinc-50 dark:bg-[#121316] shadow-[2px_2px_0px_#000000]">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className={`border border-black px-1.5 py-0.2 text-[9px] font-black uppercase ${m.role === "captain" ? "bg-[#C6F36B] text-black" : "bg-black text-white"}`}>
+                              {m.role === "captain" ? "CAPTAIN" : `MEMBER 0${idx + 1}`}
+                            </span>
+                            <span className="font-mono text-[10px] font-bold text-black/50 dark:text-white/50">{m.player_id}</span>
+                          </div>
+                          <p className="text-sm font-black uppercase text-black dark:text-white truncate">{m.username}</p>
+                          <p className="text-xs font-bold text-black/75 dark:text-white/75 truncate">IGN: {m.ign || "—"}</p>
+                          <p className="text-xs font-mono font-bold text-black dark:text-[#C6F36B] truncate">UID: {m.uid || "—"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {!adminSquads.length && (
+                  <div className="p-8 text-center text-sm font-black uppercase text-black/50 dark:text-white/50">
+                    No squads have been formed yet.
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* TAB: CONNECTIONS */}
+          {activeTab === "connections" && (
+            <section className="space-y-6">
+              {/* Accepted Friendships */}
+              <div className="neo p-5 sm:p-6">
+                <div className="mb-5 flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-4">
+                  <div className="flex items-center gap-2">
+                    <UserCheck size={20} strokeWidth={2.5} />
+                    <h3 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">Active Friendships</h3>
+                  </div>
+                  <span className="neo-badge">{adminConnections?.friendships.length || 0} Connections</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[700px] text-left text-xs font-bold">
+                    <thead>
+                      <tr className="border-b-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#121316] text-black dark:text-white">
+                        <th className="p-3 uppercase">Player 1</th>
+                        <th className="p-3 uppercase">P1 FF UID</th>
+                        <th className="p-3 uppercase text-center">Status</th>
+                        <th className="p-3 uppercase">Player 2</th>
+                        <th className="p-3 uppercase">P2 FF UID</th>
+                        <th className="p-3 uppercase">Connected Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminConnections?.friendships.map(f => (
+                        <tr key={f.id} className="border-b border-black/10 dark:border-white/10 hover:bg-[#F9F6F0] dark:hover:bg-[#252836]/60">
+                          <td className="p-3 font-black text-black dark:text-white">
+                            {f.user1.username} <span className="font-mono text-[10px] text-black/50 dark:text-white/50">({f.user1.player_id})</span>
+                            <span className="block text-[11px] font-normal text-black/60 dark:text-white/60">IGN: {f.user1.ign || "—"}</span>
+                          </td>
+                          <td className="p-3 font-mono text-black dark:text-white">{f.user1.uid || "—"}</td>
+                          <td className="p-3 text-center">
+                            <span className="border border-black bg-[#C6F36B] px-2 py-0.5 text-[10px] font-black uppercase text-black">
+                              Friends
+                            </span>
+                          </td>
+                          <td className="p-3 font-black text-black dark:text-white">
+                            {f.user2.username} <span className="font-mono text-[10px] text-black/50 dark:text-white/50">({f.user2.player_id})</span>
+                            <span className="block text-[11px] font-normal text-black/60 dark:text-white/60">IGN: {f.user2.ign || "—"}</span>
+                          </td>
+                          <td className="p-3 font-mono text-black dark:text-white">{f.user2.uid || "—"}</td>
+                          <td className="p-3 text-black/70 dark:text-white/70">{new Date(f.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!adminConnections?.friendships.length && (
+                    <div className="p-8 text-center text-sm font-black uppercase text-black/50 dark:text-white/50">
+                      No active friendships recorded.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Pending Friend Requests */}
+              <div className="neo p-5 sm:p-6">
+                <div className="mb-5 flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-4">
+                  <div className="flex items-center gap-2">
+                    <Link2 size={20} strokeWidth={2.5} />
+                    <h3 className="text-xl font-black uppercase tracking-tight text-black dark:text-white">Pending Requests</h3>
+                  </div>
+                  <span className="neo-badge">{adminConnections?.pending_requests.length || 0} Pending</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[650px] text-left text-xs font-bold">
+                    <thead>
+                      <tr className="border-b-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#121316] text-black dark:text-white">
+                        <th className="p-3 uppercase">Sender</th>
+                        <th className="p-3 uppercase">Sender UID</th>
+                        <th className="p-3 uppercase text-center">Status</th>
+                        <th className="p-3 uppercase">Target (Receiver)</th>
+                        <th className="p-3 uppercase">Receiver UID</th>
+                        <th className="p-3 uppercase">Sent Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminConnections?.pending_requests.map(r => (
+                        <tr key={r.id} className="border-b border-black/10 dark:border-white/10 hover:bg-[#F9F6F0] dark:hover:bg-[#252836]/60">
+                          <td className="p-3 font-black text-black dark:text-white">
+                            {r.sender.username} <span className="font-mono text-[10px] text-black/50 dark:text-white/50">({r.sender.player_id})</span>
+                          </td>
+                          <td className="p-3 font-mono text-black dark:text-white">{r.sender.uid || "—"}</td>
+                          <td className="p-3 text-center">
+                            <span className="border border-black bg-[#FFE600] px-2 py-0.5 text-[10px] font-black uppercase text-black">
+                              Pending
+                            </span>
+                          </td>
+                          <td className="p-3 font-black text-black dark:text-white">
+                            {r.receiver.username} <span className="font-mono text-[10px] text-black/50 dark:text-white/50">({r.receiver.player_id})</span>
+                          </td>
+                          <td className="p-3 font-mono text-black dark:text-white">{r.receiver.uid || "—"}</td>
+                          <td className="p-3 text-black/70 dark:text-white/70">{new Date(r.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!adminConnections?.pending_requests.length && (
+                    <div className="p-8 text-center text-sm font-black uppercase text-black/50 dark:text-white/50">
+                      No pending friend requests.
+                    </div>
+                  )}
+                </div>
+              </div>
             </section>
           )}
         </>

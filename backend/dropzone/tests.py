@@ -217,6 +217,168 @@ class TournamentTests(TestCase):
         self.assertEqual(registration.status, "confirmed")
         self.assertEqual(registration.slot.number, 1)
 
+class FriendsAndSquadTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.u1 = User.objects.create_user(username="player1", password="Password123!")
+        GameAccount.objects.create(user=self.u1, game="free_fire", ign="IGN_P1", uid="FF111")
+        self.c1 = APIClient()
+        self.c1.force_authenticate(user=self.u1)
+
+        self.u2 = User.objects.create_user(username="player2", password="Password123!")
+        GameAccount.objects.create(user=self.u2, game="free_fire", ign="IGN_P2", uid="FF222")
+        self.c2 = APIClient()
+        self.c2.force_authenticate(user=self.u2)
+
+        self.u3 = User.objects.create_user(username="player3", password="Password123!")
+        GameAccount.objects.create(user=self.u3, game="free_fire", ign="IGN_P3", uid="FF333")
+
+        self.u4 = User.objects.create_user(username="player4", password="Password123!")
+        GameAccount.objects.create(user=self.u4, game="free_fire", ign="IGN_P4", uid="FF444")
+
+        self.u5 = User.objects.create_user(username="player5", password="Password123!")
+        GameAccount.objects.create(user=self.u5, game="free_fire", ign="IGN_P5", uid="FF555")
+
+    def test_search_players_by_ff_uid(self):
+        # Search by exact or partial UID
+        res = self.c1.get("/api/players/search?uid=FF222")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]["username"], "player2")
+        self.assertEqual(res.data[0]["uid"], "FF222")
+        self.assertEqual(res.data[0]["ign"], "IGN_P2")
+        self.assertEqual(res.data[0]["status"], "none")
+
+        # Search for non-existent UID
+        res_none = self.c1.get("/api/players/search?uid=999999")
+        self.assertEqual(res_none.status_code, 200)
+        self.assertEqual(len(res_none.data), 0)
+
+        # Search matching own UID marks status as 'self'
+        res_self = self.c1.get("/api/players/search?uid=FF111")
+        self.assertEqual(res_self.status_code, 200)
+        self.assertEqual(res_self.data[0]["status"], "self")
+
+    def test_friend_request_lifecycle(self):
+        # Cannot send friend request to self
+        res_self = self.c1.post("/api/friends/request", {"user_id": self.u1.id}, format="json")
+        self.assertEqual(res_self.status_code, 400)
+
+        # Send friend request to player 2
+        res = self.c1.post("/api/friends/request", {"uid": "FF222"}, format="json")
+        self.assertEqual(res.status_code, 200)
+        req_id = res.data["id"]
+
+        # Duplicate request blocked
+        res_dup = self.c1.post("/api/friends/request", {"user_id": self.u2.id}, format="json")
+        self.assertEqual(res_dup.status_code, 400)
+
+        # Player 2 received request
+        recv = self.c2.get("/api/friends/requests/received")
+        self.assertEqual(len(recv.data), 1)
+        self.assertEqual(recv.data[0]["sender"]["username"], "player1")
+
+        # Player 1 sent request
+        sent = self.c1.get("/api/friends/requests/sent")
+        self.assertEqual(len(sent.data), 1)
+        self.assertEqual(sent.data[0]["receiver"]["username"], "player2")
+
+        # Player 2 accepts request
+        acc = self.c2.post(f"/api/friends/requests/{req_id}/accept", format="json")
+        self.assertEqual(acc.status_code, 200)
+
+        # Check friends list for both
+        f1 = self.c1.get("/api/friends")
+        self.assertEqual(len(f1.data), 1)
+        self.assertEqual(f1.data[0]["username"], "player2")
+
+        f2 = self.c2.get("/api/friends")
+        self.assertEqual(len(f2.data), 1)
+        self.assertEqual(f2.data[0]["username"], "player1")
+
+        # Remove friend
+        rem = self.c1.delete(f"/api/friends/{self.u2.id}")
+        self.assertEqual(rem.status_code, 204)
+        self.assertEqual(len(self.c1.get("/api/friends").data), 0)
+
+    def test_squad_lifecycle_and_rules(self):
+        # Create squad
+        res = self.c1.post("/api/squads", {"name": "TEAM TITANS"}, format="json")
+        self.assertEqual(res.status_code, 201)
+        self.assertTrue(res.data["squad_id"].startswith("AAG-SQ-"))
+        self.assertEqual(res.data["member_count"], 1)
+
+        # Cannot create second squad
+        res2 = self.c1.post("/api/squads", {"name": "TEAM OLYMPUS"}, format="json")
+        self.assertEqual(res2.status_code, 400)
+
+        # Cannot invite someone who is not a friend
+        res_inv_fail = self.c1.post("/api/squads/invite", {"user_id": self.u2.id}, format="json")
+        self.assertEqual(res_inv_fail.status_code, 400)
+
+        # Make player 1 and player 2 friends first
+        from .models import Friendship
+        Friendship.objects.create(user1=self.u1, user2=self.u2)
+
+        # Now invite player 2 to squad
+        res_inv = self.c1.post("/api/squads/invite", {"user_id": self.u2.id}, format="json")
+        self.assertEqual(res_inv.status_code, 200)
+        inv_id = res_inv.data["id"]
+
+        # Player 2 accepts invitation
+        res_join = self.c2.post(f"/api/squads/invitations/{inv_id}/accept", format="json")
+        self.assertEqual(res_join.status_code, 200)
+
+        # Check squad roster
+        squad_info = self.c1.get("/api/squads/me")
+        self.assertTrue(squad_info.data["in_squad"])
+        self.assertEqual(squad_info.data["squad"]["member_count"], 2)
+
+        # Captain kicks player 2
+        kick = self.c1.post(f"/api/squads/members/{self.u2.id}/remove", format="json")
+        self.assertEqual(kick.status_code, 200)
+
+        squad_after_kick = self.c1.get("/api/squads/me")
+        self.assertEqual(squad_after_kick.data["squad"]["member_count"], 1)
+
+    def test_notifications_flow(self):
+        # Send friend request creates notification
+        self.c1.post("/api/friends/request", {"uid": "FF222"}, format="json")
+
+        notifs = self.c2.get("/api/notifications")
+        self.assertEqual(len(notifs.data), 1)
+        self.assertEqual(notifs.data[0]["title"], "Friend Request")
+
+        # Unread count
+        count_res = self.c2.get("/api/notifications/unread-count")
+        self.assertEqual(count_res.data["unread_count"], 1)
+
+        # Mark read
+        notif_id = notifs.data[0]["id"]
+        self.c2.post(f"/api/notifications/{notif_id}/read", format="json")
+        count_after = self.c2.get("/api/notifications/unread-count")
+        self.assertEqual(count_after.data["unread_count"], 0)
+
+    @override_settings(ADMIN_SESSION_MAX_AGE=3600)
+    def test_admin_connections_and_squads(self):
+        admin_client = APIClient()
+        admin_client.credentials(HTTP_X_ADMIN_TOKEN=signing.dumps({"role": "organiser"}, salt="aag-admin"))
+
+        from .models import Friendship, Squad, SquadMember
+        Friendship.objects.create(user1=self.u1, user2=self.u2)
+        sq = Squad.objects.create(name="Admin Squad", squad_id="AAG-SQ-9999", captain=self.u1)
+        SquadMember.objects.create(squad=sq, user=self.u1, role="captain")
+
+        conn_res = admin_client.get("/api/admin/connections")
+        self.assertEqual(conn_res.status_code, 200)
+        self.assertEqual(len(conn_res.data["friendships"]), 1)
+
+        sq_res = admin_client.get("/api/admin/squads")
+        self.assertEqual(sq_res.status_code, 200)
+        self.assertEqual(len(sq_res.data), 1)
+        self.assertEqual(sq_res.data[0]["name"], "Admin Squad")
+
+
     @override_settings(ADMIN_SESSION_MAX_AGE=3600, PAYMENT_MODE="demo")
     def test_admin_approval_assigns_next_queue_slot(self):
         team = Team.objects.create(name="Demo squad", captain=self.user)
@@ -250,3 +412,165 @@ class TournamentTests(TestCase):
         registration.refresh_from_db()
         self.assertEqual(registration.status, "confirmed")
         self.assertEqual(registration.slot.number, 1)
+
+class FriendsAndSquadTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.u1 = User.objects.create_user(username="player1", password="Password123!")
+        GameAccount.objects.create(user=self.u1, game="free_fire", ign="IGN_P1", uid="FF111")
+        self.c1 = APIClient()
+        self.c1.force_authenticate(user=self.u1)
+
+        self.u2 = User.objects.create_user(username="player2", password="Password123!")
+        GameAccount.objects.create(user=self.u2, game="free_fire", ign="IGN_P2", uid="FF222")
+        self.c2 = APIClient()
+        self.c2.force_authenticate(user=self.u2)
+
+        self.u3 = User.objects.create_user(username="player3", password="Password123!")
+        GameAccount.objects.create(user=self.u3, game="free_fire", ign="IGN_P3", uid="FF333")
+
+        self.u4 = User.objects.create_user(username="player4", password="Password123!")
+        GameAccount.objects.create(user=self.u4, game="free_fire", ign="IGN_P4", uid="FF444")
+
+        self.u5 = User.objects.create_user(username="player5", password="Password123!")
+        GameAccount.objects.create(user=self.u5, game="free_fire", ign="IGN_P5", uid="FF555")
+
+    def test_search_players_by_ff_uid(self):
+        # Search by exact or partial UID
+        res = self.c1.get("/api/players/search?uid=FF222")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]["username"], "player2")
+        self.assertEqual(res.data[0]["uid"], "FF222")
+        self.assertEqual(res.data[0]["ign"], "IGN_P2")
+        self.assertEqual(res.data[0]["status"], "none")
+
+        # Search for non-existent UID
+        res_none = self.c1.get("/api/players/search?uid=999999")
+        self.assertEqual(res_none.status_code, 200)
+        self.assertEqual(len(res_none.data), 0)
+
+        # Search matching own UID marks status as 'self'
+        res_self = self.c1.get("/api/players/search?uid=FF111")
+        self.assertEqual(res_self.status_code, 200)
+        self.assertEqual(res_self.data[0]["status"], "self")
+
+    def test_friend_request_lifecycle(self):
+        # Cannot send friend request to self
+        res_self = self.c1.post("/api/friends/request", {"user_id": self.u1.id}, format="json")
+        self.assertEqual(res_self.status_code, 400)
+
+        # Send friend request to player 2
+        res = self.c1.post("/api/friends/request", {"uid": "FF222"}, format="json")
+        self.assertEqual(res.status_code, 200)
+        req_id = res.data["id"]
+
+        # Duplicate request blocked
+        res_dup = self.c1.post("/api/friends/request", {"user_id": self.u2.id}, format="json")
+        self.assertEqual(res_dup.status_code, 400)
+
+        # Player 2 received request
+        recv = self.c2.get("/api/friends/requests/received")
+        self.assertEqual(len(recv.data), 1)
+        self.assertEqual(recv.data[0]["sender"]["username"], "player1")
+
+        # Player 1 sent request
+        sent = self.c1.get("/api/friends/requests/sent")
+        self.assertEqual(len(sent.data), 1)
+        self.assertEqual(sent.data[0]["receiver"]["username"], "player2")
+
+        # Player 2 accepts request
+        acc = self.c2.post(f"/api/friends/requests/{req_id}/accept", format="json")
+        self.assertEqual(acc.status_code, 200)
+
+        # Check friends list for both
+        f1 = self.c1.get("/api/friends")
+        self.assertEqual(len(f1.data), 1)
+        self.assertEqual(f1.data[0]["username"], "player2")
+
+        f2 = self.c2.get("/api/friends")
+        self.assertEqual(len(f2.data), 1)
+        self.assertEqual(f2.data[0]["username"], "player1")
+
+        # Remove friend
+        rem = self.c1.delete(f"/api/friends/{self.u2.id}")
+        self.assertEqual(rem.status_code, 204)
+        self.assertEqual(len(self.c1.get("/api/friends").data), 0)
+
+    def test_squad_lifecycle_and_rules(self):
+        # Create squad
+        res = self.c1.post("/api/squads", {"name": "TEAM TITANS"}, format="json")
+        self.assertEqual(res.status_code, 201)
+        self.assertTrue(res.data["squad_id"].startswith("AAG-SQ-"))
+        self.assertEqual(res.data["member_count"], 1)
+
+        # Cannot create second squad
+        res2 = self.c1.post("/api/squads", {"name": "TEAM OLYMPUS"}, format="json")
+        self.assertEqual(res2.status_code, 400)
+
+        # Cannot invite someone who is not a friend
+        res_inv_fail = self.c1.post("/api/squads/invite", {"user_id": self.u2.id}, format="json")
+        self.assertEqual(res_inv_fail.status_code, 400)
+
+        # Make player 1 and player 2 friends first
+        from .models import Friendship
+        Friendship.objects.create(user1=self.u1, user2=self.u2)
+
+        # Now invite player 2 to squad
+        res_inv = self.c1.post("/api/squads/invite", {"user_id": self.u2.id}, format="json")
+        self.assertEqual(res_inv.status_code, 200)
+        inv_id = res_inv.data["id"]
+
+        # Player 2 accepts invitation
+        res_join = self.c2.post(f"/api/squads/invitations/{inv_id}/accept", format="json")
+        self.assertEqual(res_join.status_code, 200)
+
+        # Check squad roster
+        squad_info = self.c1.get("/api/squads/me")
+        self.assertTrue(squad_info.data["in_squad"])
+        self.assertEqual(squad_info.data["squad"]["member_count"], 2)
+
+        # Captain kicks player 2
+        kick = self.c1.post(f"/api/squads/members/{self.u2.id}/remove", format="json")
+        self.assertEqual(kick.status_code, 200)
+
+        squad_after_kick = self.c1.get("/api/squads/me")
+        self.assertEqual(squad_after_kick.data["squad"]["member_count"], 1)
+
+    def test_notifications_flow(self):
+        # Send friend request creates notification
+        self.c1.post("/api/friends/request", {"uid": "FF222"}, format="json")
+
+        notifs = self.c2.get("/api/notifications")
+        self.assertEqual(len(notifs.data), 1)
+        self.assertEqual(notifs.data[0]["title"], "Friend Request")
+
+        # Unread count
+        count_res = self.c2.get("/api/notifications/unread-count")
+        self.assertEqual(count_res.data["unread_count"], 1)
+
+        # Mark read
+        notif_id = notifs.data[0]["id"]
+        self.c2.post(f"/api/notifications/{notif_id}/read", format="json")
+        count_after = self.c2.get("/api/notifications/unread-count")
+        self.assertEqual(count_after.data["unread_count"], 0)
+
+    @override_settings(ADMIN_SESSION_MAX_AGE=3600)
+    def test_admin_connections_and_squads(self):
+        admin_client = APIClient()
+        admin_client.credentials(HTTP_X_ADMIN_TOKEN=signing.dumps({"role": "organiser"}, salt="aag-admin"))
+
+        from .models import Friendship, Squad, SquadMember
+        Friendship.objects.create(user1=self.u1, user2=self.u2)
+        sq = Squad.objects.create(name="Admin Squad", squad_id="AAG-SQ-9999", captain=self.u1)
+        SquadMember.objects.create(squad=sq, user=self.u1, role="captain")
+
+        conn_res = admin_client.get("/api/admin/connections")
+        self.assertEqual(conn_res.status_code, 200)
+        self.assertEqual(len(conn_res.data["friendships"]), 1)
+
+        sq_res = admin_client.get("/api/admin/squads")
+        self.assertEqual(sq_res.status_code, 200)
+        self.assertEqual(len(sq_res.data), 1)
+        self.assertEqual(sq_res.data[0]["name"], "Admin Squad")
+

@@ -485,3 +485,526 @@ def my_participation(request):
         "team": registration.team.name,
         "slot": registration.slot.number if registration.slot else None,
     } for registration in registrations])
+
+# ----------------- PLAYER SEARCH & FRIEND SYSTEM -----------------
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def search_players(request):
+    uid_query = request.query_params.get("uid", "").strip()
+    if not uid_query:
+        return Response([])
+    accounts = GameAccount.objects.filter(
+        game="free_fire",
+        uid__icontains=uid_query
+    ).select_related("user", "user__profile")[:25]
+    
+    friend_ids = set()
+    fships = Friendship.objects.filter(models.Q(user1=request.user) | models.Q(user2=request.user))
+    for f in fships:
+        friend_ids.add(f.user2_id if f.user1_id == request.user.id else f.user1_id)
+        
+    sent_reqs = {r.receiver_id: r.id for r in FriendRequest.objects.filter(sender=request.user, status="pending")}
+    received_reqs = {r.sender_id: r.id for r in FriendRequest.objects.filter(receiver=request.user, status="pending")}
+    
+    results = []
+    for acc in accounts:
+        u = acc.user
+        photo_url = None
+        if hasattr(u, "profile") and u.profile.photo:
+            try:
+                photo_url = u.profile.photo.url
+            except Exception:
+                photo_url = None
+        if u.id == request.user.id:
+            status_str = "self"
+            req_id = None
+        elif u.id in friend_ids:
+            status_str = "friends"
+            req_id = None
+        elif u.id in sent_reqs:
+            status_str = "pending_sent"
+            req_id = sent_reqs[u.id]
+        elif u.id in received_reqs:
+            status_str = "pending_received"
+            req_id = received_reqs[u.id]
+        else:
+            status_str = "none"
+            req_id = None
+            
+        results.append({
+            "id": u.id,
+            "player_id": u.player_id,
+            "username": u.username,
+            "ign": acc.ign,
+            "uid": acc.uid,
+            "photo": photo_url,
+            "status": status_str,
+            "request_id": req_id,
+        })
+    return Response(results)
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def list_friends(request):
+    fships = Friendship.objects.filter(
+        models.Q(user1=request.user) | models.Q(user2=request.user)
+    ).select_related("user1", "user2", "user1__profile", "user2__profile").prefetch_related("user1__game_accounts", "user2__game_accounts")
+    
+    friends = []
+    for f in fships:
+        other = f.user2 if f.user1_id == request.user.id else f.user1
+        account = next((a for a in other.game_accounts.all() if a.game == "free_fire"), None)
+        photo_url = None
+        if hasattr(other, "profile") and other.profile.photo:
+            try: photo_url = other.profile.photo.url
+            except Exception: photo_url = None
+        friends.append({
+            "friendship_id": f.id,
+            "id": other.id,
+            "player_id": other.player_id,
+            "username": other.username,
+            "ign": account.ign if account else "",
+            "uid": account.uid if account else "",
+            "photo": photo_url,
+            "created_at": f.created_at,
+        })
+    return Response(friends)
+
+@api_view(["DELETE"])
+@permission_classes([permissions.IsAuthenticated])
+def remove_friend(request, user_id):
+    u1, u2 = (request.user.id, user_id) if request.user.id < user_id else (user_id, request.user.id)
+    Friendship.objects.filter(user1_id=u1, user2_id=u2).delete()
+    FriendRequest.objects.filter(
+        (models.Q(sender=request.user, receiver_id=user_id) | models.Q(sender_id=user_id, receiver=request.user))
+    ).delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def list_friend_requests_received(request):
+    reqs = FriendRequest.objects.filter(
+        receiver=request.user, status="pending"
+    ).select_related("sender", "sender__profile").prefetch_related("sender__game_accounts")
+    
+    output = []
+    for r in reqs:
+        sender = r.sender
+        account = next((a for a in sender.game_accounts.all() if a.game == "free_fire"), None)
+        photo_url = None
+        if hasattr(sender, "profile") and sender.profile.photo:
+            try: photo_url = sender.profile.photo.url
+            except Exception: photo_url = None
+        output.append({
+            "id": r.id,
+            "sender": {
+                "id": sender.id,
+                "player_id": sender.player_id,
+                "username": sender.username,
+                "ign": account.ign if account else "",
+                "uid": account.uid if account else "",
+                "photo": photo_url,
+            },
+            "created_at": r.created_at,
+        })
+    return Response(output)
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def list_friend_requests_sent(request):
+    reqs = FriendRequest.objects.filter(
+        sender=request.user, status="pending"
+    ).select_related("receiver", "receiver__profile").prefetch_related("receiver__game_accounts")
+    
+    output = []
+    for r in reqs:
+        rec = r.receiver
+        account = next((a for a in rec.game_accounts.all() if a.game == "free_fire"), None)
+        photo_url = None
+        if hasattr(rec, "profile") and rec.profile.photo:
+            try: photo_url = rec.profile.photo.url
+            except Exception: photo_url = None
+        output.append({
+            "id": r.id,
+            "receiver": {
+                "id": rec.id,
+                "player_id": rec.player_id,
+                "username": rec.username,
+                "ign": account.ign if account else "",
+                "uid": account.uid if account else "",
+                "photo": photo_url,
+            },
+            "created_at": r.created_at,
+        })
+    return Response(output)
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def send_friend_request(request):
+    target_user_id = request.data.get("user_id")
+    target_uid = request.data.get("uid")
+    if target_user_id:
+        target_user = User.objects.filter(pk=target_user_id).first()
+    elif target_uid:
+        acc = GameAccount.objects.filter(game="free_fire", uid__iexact=str(target_uid).strip()).select_related("user").first()
+        target_user = acc.user if acc else None
+    else:
+        return Response({"detail": "Player user ID or Free Fire UID is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if not target_user:
+        return Response({"detail": "Player not found."}, status=status.HTTP_404_NOT_FOUND)
+    if target_user.id == request.user.id:
+        return Response({"detail": "You cannot send a friend request to yourself."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    u1, u2 = (request.user.id, target_user.id) if request.user.id < target_user.id else (target_user.id, request.user.id)
+    if Friendship.objects.filter(user1_id=u1, user2_id=u2).exists():
+        return Response({"detail": "You are already friends with this player."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    incoming = FriendRequest.objects.filter(sender=target_user, receiver=request.user, status="pending").first()
+    if incoming:
+        incoming.status = "accepted"
+        incoming.save(update_fields=["status"])
+        Friendship.objects.get_or_create(user1_id=u1, user2_id=u2)
+        Notification.objects.create(user=target_user, title="Friend Request Accepted", body=f"{request.user.username} accepted your friend request.")
+        Notification.objects.create(user=request.user, title="Friend Request Accepted", body=f"You and {target_user.username} are now friends.")
+        return Response({"status": "accepted", "detail": f"You and {target_user.username} are now friends!"})
+        
+    if FriendRequest.objects.filter(sender=request.user, receiver=target_user, status="pending").exists():
+        return Response({"detail": "A friend request is already pending for this player."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    req, _ = FriendRequest.objects.update_or_create(sender=request.user, receiver=target_user, defaults={"status": "pending"})
+    Notification.objects.create(user=target_user, title="Friend Request", body=f"{request.user.username} sent you a friend request.")
+    return Response({"id": req.id, "status": "pending", "detail": f"Friend request sent to {target_user.username}."})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def accept_friend_request(request, request_id):
+    req = get_object_or_404(FriendRequest, pk=request_id, receiver=request.user, status="pending")
+    req.status = "accepted"
+    req.save(update_fields=["status"])
+    u1, u2 = (req.sender_id, request.user.id) if req.sender_id < request.user.id else (request.user.id, req.sender_id)
+    Friendship.objects.get_or_create(user1_id=u1, user2_id=u2)
+    Notification.objects.create(user=req.sender, title="Friend Request Accepted", body=f"{request.user.username} accepted your friend request.")
+    return Response({"status": "accepted", "detail": f"You are now friends with {req.sender.username}."})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def reject_friend_request(request, request_id):
+    req = get_object_or_404(FriendRequest, pk=request_id, receiver=request.user, status="pending")
+    req.status = "rejected"
+    req.save(update_fields=["status"])
+    return Response({"status": "rejected", "detail": "Friend request rejected."})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def cancel_friend_request(request, request_id):
+    req = get_object_or_404(FriendRequest, pk=request_id, sender=request.user, status="pending")
+    req.status = "cancelled"
+    req.save(update_fields=["status"])
+    return Response({"status": "cancelled", "detail": "Friend request cancelled."})
+
+# ----------------- SQUAD MANAGEMENT -----------------
+
+def serialize_squad(squad, current_user=None):
+    members = squad.members.select_related("user", "user__profile").prefetch_related("user__game_accounts").order_by("-role", "joined_at")
+    member_data = []
+    for m in members:
+        u = m.user
+        acc = next((a for a in u.game_accounts.all() if a.game == "free_fire"), None)
+        photo_url = None
+        if hasattr(u, "profile") and u.profile.photo:
+            try: photo_url = u.profile.photo.url
+            except Exception: photo_url = None
+        member_data.append({
+            "id": m.id,
+            "user_id": u.id,
+            "player_id": u.player_id,
+            "username": u.username,
+            "role": m.role,
+            "ign": acc.ign if acc else "",
+            "uid": acc.uid if acc else "",
+            "photo": photo_url,
+            "joined_at": m.joined_at,
+        })
+    invitations = []
+    if current_user and squad.captain_id == current_user.id:
+        for inv in squad.squad_invitations.filter(status="pending").select_related("invitee", "invitee__profile").prefetch_related("invitee__game_accounts"):
+            inv_acc = next((a for a in inv.invitee.game_accounts.all() if a.game == "free_fire"), None)
+            invitations.append({
+                "id": inv.id,
+                "invitee_id": inv.invitee.id,
+                "username": inv.invitee.username,
+                "ign": inv_acc.ign if inv_acc else "",
+                "uid": inv_acc.uid if inv_acc else "",
+                "created_at": inv.created_at,
+            })
+    return {
+        "id": squad.id,
+        "squad_id": squad.squad_id,
+        "name": squad.name,
+        "captain_id": squad.captain_id,
+        "captain_username": squad.captain.username,
+        "is_captain": current_user.id == squad.captain_id if current_user else False,
+        "member_count": len(member_data),
+        "members": member_data,
+        "pending_invitations": invitations,
+        "created_at": squad.created_at,
+    }
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def my_squad(request):
+    membership = SquadMember.objects.filter(user=request.user, squad__is_active=True).select_related("squad", "squad__captain").first()
+    invitations = []
+    for inv in SquadInvitation.objects.filter(invitee=request.user, status="pending", squad__is_active=True).select_related("squad", "inviter"):
+        invitations.append({
+            "id": inv.id,
+            "squad_name": inv.squad.name,
+            "squad_id": inv.squad.squad_id,
+            "inviter_username": inv.inviter.username,
+            "created_at": inv.created_at,
+        })
+    if not membership:
+        return Response({"in_squad": False, "squad": None, "invitations": invitations})
+    return Response({
+        "in_squad": True,
+        "squad": serialize_squad(membership.squad, request.user),
+        "invitations": invitations,
+    })
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def create_squad(request):
+    if SquadMember.objects.filter(user=request.user, squad__is_active=True).exists():
+        return Response({"detail": "You already belong to an active squad. Leave your current squad before creating a new one."}, status=status.HTTP_400_BAD_REQUEST)
+    name = request.data.get("name", "").strip()
+    if not name:
+        return Response({"detail": "Squad name is required."}, status=status.HTTP_400_BAD_REQUEST)
+    if Squad.objects.filter(name__iexact=name, is_active=True).exists():
+        return Response({"detail": "A squad with this name already exists. Choose a unique name."}, status=status.HTTP_400_BAD_REQUEST)
+    import random
+    rand_code = f"{random.randint(1000, 9999)}"
+    squad_code = f"AAG-SQ-{rand_code}"
+    while Squad.objects.filter(squad_id=squad_code).exists():
+        squad_code = f"AAG-SQ-{random.randint(1000, 9999)}"
+    with transaction.atomic():
+        squad = Squad.objects.create(name=name, squad_id=squad_code, captain=request.user, is_active=True)
+        SquadMember.objects.create(squad=squad, user=request.user, role="captain")
+        Notification.objects.create(user=request.user, title="Squad Created", body=f"Squad '{squad.name}' ({squad.squad_id}) has been created!")
+    return Response(serialize_squad(squad, request.user), status=status.HTTP_201_CREATED)
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def invite_to_squad(request):
+    membership = SquadMember.objects.filter(user=request.user, squad__is_active=True, role="captain").select_related("squad").first()
+    if not membership:
+        return Response({"detail": "Only squad captains can invite members."}, status=status.HTTP_403_FORBIDDEN)
+    squad = membership.squad
+    if squad.members.count() >= 4:
+        return Response({"detail": "Your squad is already full (maximum 4 players)."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    target_user_id = request.data.get("user_id")
+    target_uid = request.data.get("uid")
+    if target_user_id:
+        target_user = User.objects.filter(pk=target_user_id).first()
+    elif target_uid:
+        acc = GameAccount.objects.filter(game="free_fire", uid__iexact=str(target_uid).strip()).select_related("user").first()
+        target_user = acc.user if acc else None
+    else:
+        return Response({"detail": "Friend user ID or Free Fire UID required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if not target_user:
+        return Response({"detail": "Player not found."}, status=status.HTTP_404_NOT_FOUND)
+    if target_user.id == request.user.id:
+        return Response({"detail": "You cannot invite yourself to your squad."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    u1, u2 = (request.user.id, target_user.id) if request.user.id < target_user.id else (target_user.id, request.user.id)
+    if not Friendship.objects.filter(user1_id=u1, user2_id=u2).exists():
+        return Response({"detail": f"{target_user.username} must be on your Friends list before you can invite them."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if SquadMember.objects.filter(user=target_user, squad__is_active=True).exists():
+        return Response({"detail": f"{target_user.username} is already a member of an active squad."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if SquadInvitation.objects.filter(squad=squad, invitee=target_user, status="pending").exists():
+        return Response({"detail": f"An invitation is already pending for {target_user.username}."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    inv = SquadInvitation.objects.create(squad=squad, inviter=request.user, invitee=target_user, status="pending")
+    Notification.objects.create(user=target_user, title="Squad Invitation", body=f"You have been invited to join squad '{squad.name}' by {request.user.username}.")
+    return Response({"id": inv.id, "detail": f"Invitation sent to {target_user.username}."})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def accept_squad_invitation(request, invitation_id):
+    invitation = get_object_or_404(SquadInvitation, pk=invitation_id, invitee=request.user, status="pending")
+    squad = invitation.squad
+    if not squad.is_active:
+        return Response({"detail": "This squad is no longer active."}, status=status.HTTP_400_BAD_REQUEST)
+    if squad.members.count() >= 4:
+        return Response({"detail": "This squad is already full (maximum 4 players)."}, status=status.HTTP_400_BAD_REQUEST)
+    if SquadMember.objects.filter(user=request.user, squad__is_active=True).exists():
+        return Response({"detail": "You are already a member of an active squad. Leave it before accepting this invite."}, status=status.HTTP_400_BAD_REQUEST)
+        
+    with transaction.atomic():
+        SquadMember.objects.create(squad=squad, user=request.user, role="member")
+        invitation.status = "accepted"
+        invitation.save(update_fields=["status"])
+        SquadInvitation.objects.filter(invitee=request.user, status="pending").exclude(pk=invitation.pk).update(status="cancelled")
+        Notification.objects.create(user=squad.captain, title="Squad Member Joined", body=f"{request.user.username} has joined your squad '{squad.name}'.")
+        Notification.objects.create(user=request.user, title="Squad Joined", body=f"You have joined squad '{squad.name}'.")
+    return Response({"status": "accepted", "squad": serialize_squad(squad, request.user)})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def reject_squad_invitation(request, invitation_id):
+    invitation = get_object_or_404(SquadInvitation, pk=invitation_id, invitee=request.user, status="pending")
+    invitation.status = "rejected"
+    invitation.save(update_fields=["status"])
+    return Response({"status": "rejected", "detail": "Squad invitation rejected."})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def leave_squad(request):
+    membership = SquadMember.objects.filter(user=request.user, squad__is_active=True).select_related("squad").first()
+    if not membership:
+        return Response({"detail": "You are not currently in an active squad."}, status=status.HTTP_400_BAD_REQUEST)
+    squad = membership.squad
+    if membership.role == "captain":
+        if squad.members.count() > 1:
+            return Response({"detail": "As captain, you cannot leave while other members remain. Disband the squad or remove members first."}, status=status.HTTP_400_BAD_REQUEST)
+        squad.is_active = False
+        squad.save(update_fields=["is_active"])
+        membership.delete()
+        return Response({"detail": "Squad disbanded successfully."})
+    else:
+        membership.delete()
+        Notification.objects.create(user=squad.captain, title="Squad Member Left", body=f"{request.user.username} has left the squad.")
+        return Response({"detail": "You have left the squad."})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def disband_squad(request):
+    membership = SquadMember.objects.filter(user=request.user, squad__is_active=True, role="captain").select_related("squad").first()
+    if not membership:
+        return Response({"detail": "Only the squad captain can disband the squad."}, status=status.HTTP_403_FORBIDDEN)
+    squad = membership.squad
+    with transaction.atomic():
+        for m in squad.members.exclude(user=request.user):
+            Notification.objects.create(user=m.user, title="Squad Disbanded", body=f"Squad '{squad.name}' has been disbanded by the captain.")
+        squad.is_active = False
+        squad.save(update_fields=["is_active"])
+        squad.members.all().delete()
+    return Response({"detail": "Squad disbanded successfully."})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def remove_squad_member(request, user_id):
+    membership = SquadMember.objects.filter(user=request.user, squad__is_active=True, role="captain").select_related("squad").first()
+    if not membership:
+        return Response({"detail": "Only the squad captain can remove members."}, status=status.HTTP_403_FORBIDDEN)
+    if user_id == request.user.id:
+        return Response({"detail": "Captain cannot be removed from the squad. Disband the squad if needed."}, status=status.HTTP_400_BAD_REQUEST)
+    target_membership = SquadMember.objects.filter(squad=membership.squad, user_id=user_id).first()
+    if not target_membership:
+        return Response({"detail": "Player is not a member of this squad."}, status=status.HTTP_404_NOT_FOUND)
+    target_user = target_membership.user
+    target_membership.delete()
+    Notification.objects.create(user=target_user, title="Removed from Squad", body=f"You were removed from squad '{membership.squad.name}'.")
+    return Response({"detail": f"{target_user.username} was removed from the squad."})
+
+# ----------------- NOTIFICATIONS -----------------
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def list_notifications(request):
+    notifs = Notification.objects.filter(user=request.user).order_by("-created_at")[:50]
+    return Response(NotificationSerializer(notifs, many=True).data)
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def unread_notifications_count(request):
+    count = Notification.objects.filter(user=request.user, read_at__isnull=True).count()
+    return Response({"unread_count": count})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def mark_notification_read(request, notif_id):
+    notif = get_object_or_404(Notification, pk=notif_id, user=request.user)
+    if not notif.read_at:
+        notif.read_at = timezone.now()
+        notif.save(update_fields=["read_at"])
+    return Response({"status": "read"})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def mark_all_notifications_read(request):
+    Notification.objects.filter(user=request.user, read_at__isnull=True).update(read_at=timezone.now())
+    return Response({"status": "all_read"})
+
+# ----------------- ADMIN CONNECTIONS & SQUADS -----------------
+
+@api_view(["GET"])
+@permission_classes([IsAdmin])
+def admin_connections(request):
+    friendships = Friendship.objects.select_related("user1", "user2").prefetch_related("user1__game_accounts", "user2__game_accounts").order_by("-created_at")[:100]
+    requests = FriendRequest.objects.filter(status="pending").select_related("sender", "receiver").prefetch_related("sender__game_accounts", "receiver__game_accounts").order_by("-created_at")[:100]
+    
+    connections_data = []
+    for f in friendships:
+        acc1 = next((a for a in f.user1.game_accounts.all() if a.game == "free_fire"), None)
+        acc2 = next((a for a in f.user2.game_accounts.all() if a.game == "free_fire"), None)
+        connections_data.append({
+            "id": f.id,
+            "type": "friendship",
+            "status": "connected",
+            "user1": {"id": f.user1.id, "username": f.user1.username, "player_id": f.user1.player_id, "ign": acc1.ign if acc1 else "", "uid": acc1.uid if acc1 else ""},
+            "user2": {"id": f.user2.id, "username": f.user2.username, "player_id": f.user2.player_id, "ign": acc2.ign if acc2 else "", "uid": acc2.uid if acc2 else ""},
+            "created_at": f.created_at,
+        })
+    requests_data = []
+    for r in requests:
+        acc1 = next((a for a in r.sender.game_accounts.all() if a.game == "free_fire"), None)
+        acc2 = next((a for a in r.receiver.game_accounts.all() if a.game == "free_fire"), None)
+        requests_data.append({
+            "id": r.id,
+            "type": "request",
+            "status": "pending",
+            "sender": {"id": r.sender.id, "username": r.sender.username, "player_id": r.sender.player_id, "ign": acc1.ign if acc1 else "", "uid": acc1.uid if acc1 else ""},
+            "receiver": {"id": r.receiver.id, "username": r.receiver.username, "player_id": r.receiver.player_id, "ign": acc2.ign if acc2 else "", "uid": acc2.uid if acc2 else ""},
+            "created_at": r.created_at,
+        })
+    return Response({"friendships": connections_data, "pending_requests": requests_data})
+
+@api_view(["GET"])
+@permission_classes([IsAdmin])
+def admin_squads(request):
+    squads = Squad.objects.select_related("captain").prefetch_related("members__user__game_accounts").order_by("-created_at")
+    results = []
+    for squad in squads:
+        members_data = []
+        for m in squad.members.all():
+            acc = next((a for a in m.user.game_accounts.all() if a.game == "free_fire"), None)
+            members_data.append({
+                "id": m.user.id,
+                "username": m.user.username,
+                "player_id": m.user.player_id,
+                "role": m.role,
+                "ign": acc.ign if acc else "",
+                "uid": acc.uid if acc else "",
+            })
+        results.append({
+            "id": squad.id,
+            "name": squad.name,
+            "squad_id": squad.squad_id,
+            "is_active": squad.is_active,
+            "captain": {
+                "id": squad.captain.id,
+                "username": squad.captain.username,
+                "player_id": squad.captain.player_id,
+            },
+            "member_count": len(members_data),
+            "members": members_data,
+            "created_at": squad.created_at,
+        })
+    return Response(results)
+

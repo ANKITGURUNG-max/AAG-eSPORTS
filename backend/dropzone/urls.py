@@ -53,5 +53,63 @@ urlpatterns = [
     path("admin/players/<int:player_id>", admin_delete_player),
     path("admin/tournaments/<int:tournament_id>/roster", admin_tournament_roster),
     path("my/slots", my_tournament_slots),
+    path("my/slots/", my_tournament_slots),
     path("my/participation", my_participation),
+    path("my/participation/", my_participation),
+
+    # Player Search
+    path("players/search", search_players),
+    path("players/search/", search_players),
+
+    # Friends & Requests
+    path("friends", list_friends),
+    path("friends/", list_friends),
+    path("friends/<int:user_id>", remove_friend),
+    path("friends/<int:user_id>/", remove_friend),
+    path("friends/request", send_friend_request),
+    path("friends/request/", send_friend_request),
+    path("friends/requests/received", list_friend_requests_received),
+    path("friends/requests/received/", list_friend_requests_received),
+    path("friends/requests/sent", list_friend_requests_sent),
+    path("friends/requests/sent/", list_friend_requests_sent),
+    path("friends/requests/<int:request_id>/accept", accept_friend_request),
+    path("friends/requests/<int:request_id>/accept/", accept_friend_request),
+    path("friends/requests/<int:request_id>/reject", reject_friend_request),
+    path("friends/requests/<int:request_id>/reject/", reject_friend_request),
+    path("friends/requests/<int:request_id>/cancel", cancel_friend_request),
+    path("friends/requests/<int:request_id>/cancel/", cancel_friend_request),
+
+    # Squads
+    path("squads/me", my_squad),
+    path("squads/me/", my_squad),
+    path("squads", create_squad),
+    path("squads/", create_squad),
+    path("squads/invite", invite_to_squad),
+    path("squads/invite/", invite_to_squad),
+    path("squads/invitations/<int:invitation_id>/accept", accept_squad_invitation),
+    path("squads/invitations/<int:invitation_id>/accept/", accept_squad_invitation),
+    path("squads/invitations/<int:invitation_id>/reject", reject_squad_invitation),
+    path("squads/invitations/<int:invitation_id>/reject/", reject_squad_invitation),
+    path("squads/leave", leave_squad),
+    path("squads/leave/", leave_squad),
+    path("squads/disband", disband_squad),
+    path("squads/disband/", disband_squad),
+    path("squads/members/<int:user_id>/remove", remove_squad_member),
+    path("squads/members/<int:user_id>/remove/", remove_squad_member),
+
+    # Notifications
+    path("notifications", list_notifications),
+    path("notifications/", list_notifications),
+    path("notifications/unread-count", unread_notifications_count),
+    path("notifications/unread-count/", unread_notifications_count),
+    path("notifications/<int:notif_id>/read", mark_notification_read),
+    path("notifications/<int:notif_id>/read/", mark_notification_read),
+    path("notifications/read-all", mark_all_notifications_read),
+    path("notifications/read-all/", mark_all_notifications_read),
+
+    # Admin Management
+    path("admin/connections", admin_connections),
+    path("admin/connections/", admin_connections),
+    path("admin/squads", admin_squads),
+    path("admin/squads/", admin_squads),
 ]

@@ -122,3 +122,57 @@ class AuditLog(models.Model):
     entity_id = models.CharField(max_length=80)
     metadata = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class FriendRequest(models.Model):
+    STATUS = [("pending", "Pending"), ("accepted", "Accepted"), ("rejected", "Rejected"), ("cancelled", "Cancelled")]
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_requests")
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_requests")
+    status = models.CharField(max_length=20, choices=STATUS, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["sender", "receiver"], name="unique_friend_request")]
+
+class Friendship(models.Model):
+    user1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friendships_as_user1")
+    user2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friendships_as_user2")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user1", "user2"], name="unique_friendship")]
+
+class Squad(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    squad_id = models.CharField(max_length=20, unique=True, editable=False)
+    captain = models.ForeignKey(User, on_delete=models.PROTECT, related_name="captained_squads")
+    logo = models.ImageField(upload_to="squads/", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        if not self.squad_id:
+            import random
+            rand_code = f"{random.randint(1000, 9999)}"
+            self.squad_id = f"AAG-SQ-{rand_code}"
+        super().save(*args, **kwargs)
+
+class SquadMember(models.Model):
+    squad = models.ForeignKey(Squad, on_delete=models.CASCADE, related_name="members")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="squad_memberships")
+    role = models.CharField(max_length=10, choices=[("captain", "Captain"), ("member", "Member")])
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["squad", "user"], name="unique_squad_member")]
+
+class SquadInvitation(models.Model):
+    STATUS = [("pending", "Pending"), ("accepted", "Accepted"), ("rejected", "Rejected"), ("cancelled", "Cancelled")]
+    squad = models.ForeignKey(Squad, on_delete=models.CASCADE, related_name="squad_invitations")
+    inviter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_squad_invitations")
+    invitee = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_squad_invitations")
+    status = models.CharField(max_length=20, choices=STATUS, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["squad", "invitee"], name="unique_squad_invitation")]
+

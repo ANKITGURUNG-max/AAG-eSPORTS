@@ -10,6 +10,18 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
   const captain = profile.user.player_id;
   const [name, setName] = useState("");
   const [players, setPlayers] = useState([captain, "", "", ""]);
+  const [squadInfo, setSquadInfo] = useState<{
+    in_squad: boolean;
+    squad: {
+      id: number;
+      name: string;
+      squad_id: string;
+      is_captain: boolean;
+      captain_username: string;
+      member_count: number;
+      members: { player_id: string; username: string; ign: string; uid: string; role: string }[];
+    } | null;
+  } | null>(null);
   const [submitted, setSubmitted] = useState<{
     registration_id: number;
     team_id?: number;
@@ -28,6 +40,23 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
   useEffect(() => {
     let active = true;
     setTeamLoading(true);
+
+    // Fetch user's squad
+    api<{ in_squad: boolean; squad: any }>("squads/me/")
+      .then(res => {
+        if (!active) return;
+        setSquadInfo(res);
+        if (res.in_squad && res.squad) {
+          setName(prev => prev || res.squad.name);
+          if (res.squad.members && res.squad.members.length > 0) {
+            const memberIds = res.squad.members.map((m: any) => m.player_id || m.uid);
+            while (memberIds.length < 4) memberIds.push("");
+            setPlayers(memberIds);
+          }
+        }
+      })
+      .catch(() => {});
+
     api<
       {
         id: number;
@@ -290,19 +319,51 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
     );
   }
 
+  const isSquadIncomplete = Boolean(squadInfo?.in_squad && squadInfo.squad && squadInfo.squad.member_count < 4);
+  const isSquadNotCaptain = Boolean(squadInfo?.in_squad && squadInfo.squad && !squadInfo.squad.is_captain);
+
   return (
     <form onSubmit={submit} className="neo p-6 sm:p-8">
       <div className="mb-6 flex items-center justify-between border-b-2 border-black dark:border-white/20 pb-4">
         <div>
           <h2 className="text-2xl font-black uppercase tracking-tight text-black dark:text-white">Register Your Squad</h2>
           <p className="mt-1 text-xs font-bold text-black/60 dark:text-white/60">
-            {Number(tournament.entry_fee) === 0 ? "FREE ENTRY" : `₹${tournament.entry_fee} ENTRY FEE`} · 1–4 Free Fire Players
+            {Number(tournament.entry_fee) === 0 ? "FREE ENTRY" : `₹${tournament.entry_fee} ENTRY FEE`} · 4 Free Fire Players
           </p>
         </div>
         <div className="hidden border-2 border-black bg-[#C6F36B] px-3 py-1 text-xs font-black text-black sm:block">
           STEP 01/02
         </div>
       </div>
+
+      {/* Squad Status Card */}
+      {squadInfo?.in_squad && squadInfo.squad && (
+        <div className="mb-5 border-[3px] border-black bg-[#C6F36B] p-4 text-black shadow-[4px_4px_0px_#000000]">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider bg-black text-[#C6F36B] px-2 py-0.5">
+                REGISTERING WITH SQUAD
+              </span>
+              <h3 className="text-lg font-black uppercase mt-1">{squadInfo.squad.name}</h3>
+            </div>
+            <span className="border-2 border-black bg-white px-2.5 py-1 font-mono text-xs font-black">
+              {squadInfo.squad.squad_id}
+            </span>
+          </div>
+
+          {isSquadNotCaptain && (
+            <div className="mt-3 border-2 border-black bg-[#FFE600] p-2.5 text-xs font-black uppercase text-black">
+              Only your Squad Captain ({squadInfo.squad.captain_username}) can submit tournament registration.
+            </div>
+          )}
+
+          {isSquadIncomplete && (
+            <div className="mt-3 border-2 border-black bg-[#FF4757] p-2.5 text-xs font-black uppercase text-white">
+              A squad must have exactly 4 players before tournament registration. Currently: {squadInfo.squad.member_count}/4 players. Please invite friends in My Squad to complete your roster.
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>
@@ -320,7 +381,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
 
         <div>
           <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
-            Team Members (Your Player ID + Teammate UIDs)
+            Team Members (4 Players)
           </label>
           <div className="space-y-2.5">
             {players.map((player, index) => (
@@ -329,18 +390,18 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
                   {index + 1}
                 </span>
                 <input
-                  required={index === 0}
-                  readOnly={index === 0}
+                  required
+                  readOnly={index === 0 && Boolean(squadInfo?.in_squad)}
                   value={player}
                   onChange={updatePlayer(index)}
-                  placeholder={index === 0 ? "Your Player ID (Captain)" : `Teammate ${index} Free Fire UID (Optional)`}
-                  className={`neo-input ${index === 0 ? "bg-[#F4EFE6] dark:bg-[#252836] font-black cursor-not-allowed" : ""}`}
+                  placeholder={index === 0 ? "Captain Player ID" : `Player ${index + 1} Free Fire UID or Player ID`}
+                  className={`neo-input ${index === 0 && squadInfo?.in_squad ? "bg-[#F4EFE6] dark:bg-[#252836] font-black" : ""}`}
                 />
               </div>
             ))}
           </div>
           <p className="mt-2 text-xs font-semibold text-black/60 dark:text-white/60">
-            Teammates only need to provide their Free Fire UID; they do not need to register on the site.
+            All 4 squad members will be officially registered under your squad room slot.
           </p>
         </div>
       </div>
@@ -349,15 +410,21 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
 
       <div className="mt-6 flex items-start gap-2 border-2 border-black bg-[#FFE600] p-3 text-xs font-bold text-black">
         <ShieldCheck size={18} strokeWidth={2.5} className="mt-0.5 shrink-0" />
-        <span>Roster rules: You can adjust squad members or team name until the tournament registration closes.</span>
+        <span>Roster rules: Exactly 4 players required. You can adjust squad members or team name until registration closes.</span>
       </div>
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || isSquadIncomplete || isSquadNotCaptain}
         className="neo-solid mt-6 min-h-14 w-full text-sm uppercase tracking-wider text-black disabled:opacity-60"
       >
-        {loading ? "Submitting Squad..." : "Submit Squad & Proceed to Slot Confirmation"}
+        {loading
+          ? "Submitting Squad..."
+          : isSquadIncomplete
+          ? "Incomplete Squad (Need 4 Players)"
+          : isSquadNotCaptain
+          ? "Captain Only Registration"
+          : "Submit Squad & Proceed to Slot Confirmation"}
       </button>
     </form>
   );
