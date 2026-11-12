@@ -84,25 +84,39 @@ export function FriendsPanel({
       setFriends(friendsData);
       setReceivedRequests(receivedData);
       setSentRequests(sentData);
-    } catch {
-      // ignore
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : "Failed to load friends.", tone: "error" });
     } finally {
       setLoading(false);
     }
   };
 
+  const loadDirectory = async () => {
+    try {
+      setSearching(true);
+      const results = await api<SearchPlayerResult[]>("players/search/");
+      setSearchResults(results);
+      setHasSearched(true);
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : "Failed to load players directory.", tone: "error" });
+    } finally {
+      setSearching(false);
+    }
+  };
+
   useEffect(() => {
     loadFriendsData();
+    loadDirectory();
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchUid.trim()) return;
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSearching(true);
     setHasSearched(true);
     setMessage(null);
     try {
-      const results = await api<SearchPlayerResult[]>(`players/search/?uid=${encodeURIComponent(searchUid.trim())}`);
+      const queryParam = searchUid.trim() ? `?uid=${encodeURIComponent(searchUid.trim())}` : "";
+      const results = await api<SearchPlayerResult[]>(`players/search/${queryParam}`);
       setSearchResults(results);
     } catch (err) {
       setMessage({ text: err instanceof Error ? err.message : "Search failed.", tone: "error" });
@@ -279,10 +293,9 @@ export function FriendsPanel({
               <div className="relative flex-1">
                 <input
                   type="text"
-                  required
                   value={searchUid}
                   onChange={e => setSearchUid(e.target.value)}
-                  placeholder="Enter Free Fire UID (e.g. 1234567890)"
+                  placeholder="Search by Free Fire UID, IGN, Username or Player ID..."
                   className="neo-input uppercase tracking-wider"
                 />
               </div>
@@ -294,6 +307,18 @@ export function FriendsPanel({
                 <Search size={16} strokeWidth={3} />
                 {searching ? "Searching..." : "Search Player"}
               </button>
+              {searchUid && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchUid("");
+                    loadDirectory();
+                  }}
+                  className="neo-ghost min-h-12 px-4 text-xs uppercase tracking-wider text-black dark:text-white border-2 border-black"
+                >
+                  Clear
+                </button>
+              )}
             </form>
           </div>
 
@@ -302,7 +327,7 @@ export function FriendsPanel({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black uppercase tracking-wider text-black/70 dark:text-white/70">
-                  Search Results ({searchResults.length})
+                  {searchUid.trim() ? `Search Results (${searchResults.length})` : `Registered Players (${searchResults.length})`}
                 </h3>
               </div>
 
@@ -310,7 +335,7 @@ export function FriendsPanel({
                 <div className="neo p-8 text-center bg-white dark:bg-[#121316]">
                   <p className="text-base font-black uppercase text-black dark:text-white">No player found</p>
                   <p className="mt-1 text-xs font-bold text-black/60 dark:text-white/60">
-                    No registered player matched Free Fire UID &ldquo;{searchUid}&rdquo;. Make sure the player has signed up with this UID.
+                    No registered player matched query &ldquo;{searchUid}&rdquo;. Make sure the player has signed up with this UID.
                   </p>
                 </div>
               ) : (

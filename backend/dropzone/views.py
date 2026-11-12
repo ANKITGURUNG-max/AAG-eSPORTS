@@ -491,13 +491,22 @@ def my_participation(request):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def search_players(request):
-    uid_query = request.query_params.get("uid", "").strip()
-    if not uid_query:
-        return Response([])
-    accounts = GameAccount.objects.filter(
-        game="free_fire",
-        uid__icontains=uid_query
-    ).select_related("user", "user__profile")[:25]
+    query = (
+        request.query_params.get("uid", "")
+        or request.query_params.get("q", "")
+        or request.query_params.get("search", "")
+    ).strip()
+    
+    if query:
+        users = User.objects.filter(
+            models.Q(game_accounts__uid__icontains=query) |
+            models.Q(game_accounts__ign__icontains=query) |
+            models.Q(username__icontains=query) |
+            models.Q(player_id__icontains=query)
+        ).distinct().select_related("profile").prefetch_related("game_accounts")[:30]
+    else:
+        # Default: list registered players in the directory (excluding current user)
+        users = User.objects.exclude(id=request.user.id).select_related("profile").prefetch_related("game_accounts").order_by("-date_joined")[:20]
     
     friend_ids = set()
     fships = Friendship.objects.filter(models.Q(user1=request.user) | models.Q(user2=request.user))
@@ -508,8 +517,8 @@ def search_players(request):
     received_reqs = {r.sender_id: r.id for r in FriendRequest.objects.filter(receiver=request.user, status="pending")}
     
     results = []
-    for acc in accounts:
-        u = acc.user
+    for u in users:
+        acc = next((a for a in u.game_accounts.all() if a.game == "free_fire"), None)
         photo_url = None
         if hasattr(u, "profile") and u.profile.photo:
             try:
@@ -536,8 +545,8 @@ def search_players(request):
             "id": u.id,
             "player_id": u.player_id,
             "username": u.username,
-            "ign": acc.ign,
-            "uid": acc.uid,
+            "ign": acc.ign if acc else (f"{u.first_name} {u.last_name}".strip() or u.username),
+            "uid": acc.uid if acc else u.player_id,
             "photo": photo_url,
             "status": status_str,
             "request_id": req_id,
@@ -647,10 +656,11 @@ def send_friend_request(request):
     if target_user_id:
         target_user = User.objects.filter(pk=target_user_id).first()
     elif target_uid:
-        acc = GameAccount.objects.filter(game="free_fire", uid__iexact=str(target_uid).strip()).select_related("user").first()
-        target_user = acc.user if acc else None
+        val = str(target_uid).strip()
+        acc = GameAccount.objects.filter(game="free_fire", uid__iexact=val).select_related("user").first()
+        target_user = acc.user if acc else User.objects.filter(models.Q(player_id__iexact=val) | models.Q(username__iexact=val)).first()
     else:
-        return Response({"detail": "Player user ID or Free Fire UID is required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Player user ID, username, or Free Fire UID is required."}, status=status.HTTP_400_BAD_REQUEST)
         
     if not target_user:
         return Response({"detail": "Player not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -809,10 +819,11 @@ def invite_to_squad(request):
     if target_user_id:
         target_user = User.objects.filter(pk=target_user_id).first()
     elif target_uid:
-        acc = GameAccount.objects.filter(game="free_fire", uid__iexact=str(target_uid).strip()).select_related("user").first()
-        target_user = acc.user if acc else None
+        val = str(target_uid).strip()
+        acc = GameAccount.objects.filter(game="free_fire", uid__iexact=val).select_related("user").first()
+        target_user = acc.user if acc else User.objects.filter(models.Q(player_id__iexact=val) | models.Q(username__iexact=val)).first()
     else:
-        return Response({"detail": "Friend user ID or Free Fire UID required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Friend user ID, username, or Free Fire UID required."}, status=status.HTTP_400_BAD_REQUEST)
         
     if not target_user:
         return Response({"detail": "Player not found."}, status=status.HTTP_404_NOT_FOUND)
