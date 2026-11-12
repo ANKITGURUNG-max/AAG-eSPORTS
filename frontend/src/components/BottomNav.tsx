@@ -1,4 +1,4 @@
-import { Home, Trophy, Bell, UserRound, Radio, Shield, Users } from "lucide-react";
+import { Home, Trophy, Bell, UserRound, Radio, Users } from "lucide-react";
 
 type Props = { active: string; onChange: (value: string) => void };
 
@@ -6,7 +6,6 @@ export function BottomNav({ active, onChange }: Props) {
   const items = [
     ["home", "Home", Home],
     ["tournaments", "Tourneys", Trophy, "Tournaments"],
-    ["squad", "Squad", Shield, "My Squad"],
     ["friends", "Friends", Users, "Find & Friends"],
     ["streams", "Live", Radio, "Live Streams"],
     ["updates", "Updates", Bell, "Updates"],

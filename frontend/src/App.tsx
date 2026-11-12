@@ -15,7 +15,6 @@ import { Toast } from "./components/Toast";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { NotificationsModal } from "./components/NotificationsModal";
 import { FriendsPanel } from "./components/FriendsPanel";
-import { SquadPanel } from "./components/SquadPanel";
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: (tokens: { access: string; refresh: string }) => void }) {
   const [mode, setMode] = useState<"register" | "login">("register");
@@ -545,8 +544,6 @@ export default function App() {
               <h1 className="mt-2 truncate text-2xl font-black uppercase tracking-tight text-black dark:text-white sm:text-3xl">
                 {active === "home"
                   ? "Ready to drop?"
-                  : active === "squad"
-                  ? "My Squad"
                   : active === "friends"
                   ? "Find & Friends"
                   : active.toUpperCase()}
@@ -669,11 +666,6 @@ export default function App() {
                 </div>
               )}
             </div>
-          )}
-
-          {/* TAB: SQUAD */}
-          {active === "squad" && (
-            <SquadPanel onNavigateToTournaments={() => setActive("tournaments")} />
           )}
 
           {/* TAB: FRIENDS */}
