@@ -1,27 +1,112 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Check, CreditCard, ShieldCheck, Edit3, XCircle } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Check, CreditCard, ShieldCheck, Edit3, XCircle, Users, Search, X } from "lucide-react";
 import { api } from "../lib/api";
 import type { Tournament } from "./TournamentCard";
 import type { UserProfile } from "./ProfilePanel";
 import { RegistrationPanelSkeleton } from "./Skeletons";
 import { Toast } from "./Toast";
+import { DefaultAvatar } from "./DefaultAvatar";
+
+type FriendOption = {
+  id: number;
+  username: string;
+  ign: string;
+  uid: string;
+  player_id: string;
+  photo: string | null;
+};
+
+function FriendPicker({
+  friends,
+  onSelect,
+  onClose,
+  exclude,
+}: {
+  friends: FriendOption[];
+  onSelect: (f: FriendOption) => void;
+  onClose: () => void;
+  exclude: string[];
+}) {
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  const filtered = friends.filter(
+    (f) =>
+      !exclude.includes(f.uid) &&
+      !exclude.includes(f.player_id) &&
+      (query === "" ||
+        f.username.toLowerCase().includes(query.toLowerCase()) ||
+        f.ign.toLowerCase().includes(query.toLowerCase()) ||
+        f.uid.includes(query))
+  );
+
+  return (
+    <div
+      ref={ref}
+      className="absolute left-0 right-0 top-full z-30 mt-1 border-[3px] border-black bg-white dark:bg-[#1a1c23] shadow-[4px_4px_0px_#000000] dark:shadow-[4px_4px_0px_#c6f36b]"
+    >
+      <div className="border-b-2 border-black dark:border-white/20 p-2">
+        <div className="flex items-center gap-2 border-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#252836] px-2 py-1">
+          <Search size={13} strokeWidth={2.5} className="shrink-0 text-black/50 dark:text-white/50" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search friend by IGN or UID..."
+            className="w-full bg-transparent text-xs font-semibold text-black dark:text-white outline-none placeholder:text-black/40 dark:placeholder:text-white/40"
+          />
+        </div>
+      </div>
+      <div className="max-h-52 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <p className="p-4 text-center text-xs font-black uppercase text-black/50 dark:text-white/50">
+            {friends.length === 0 ? "No friends yet — add some first!" : "No matching friends"}
+          </p>
+        ) : (
+          filtered.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => onSelect(f)}
+              className="flex w-full items-center gap-3 border-b border-black/10 dark:border-white/10 px-3 py-2 text-left hover:bg-[#C6F36B] dark:hover:bg-[#2a2d3a] transition-colors"
+            >
+              {f.photo ? (
+                <img src={f.photo} alt={f.username} className="h-8 w-8 shrink-0 border-2 border-black object-cover" />
+              ) : (
+                <DefaultAvatar name={f.username} size="sm" />
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-xs font-black uppercase text-black dark:text-white">{f.ign}</p>
+                <p className="truncate text-[10px] font-semibold text-black/60 dark:text-white/60">
+                  @{f.username} · UID {f.uid}
+                </p>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function RegistrationPanel({ tournament, profile }: { tournament: Tournament; profile: UserProfile }) {
   const captain = profile.user.player_id;
+  const captainUid = profile.game_accounts?.[0]?.uid ?? "";
   const [name, setName] = useState("");
+  // players[0] = captain (locked), players[1..3] = teammate uid/player_id
   const [players, setPlayers] = useState([captain, "", "", ""]);
-  const [squadInfo, setSquadInfo] = useState<{
-    in_squad: boolean;
-    squad: {
-      id: number;
-      name: string;
-      squad_id: string;
-      is_captain: boolean;
-      captain_username: string;
-      member_count: number;
-      members: { player_id: string; username: string; ign: string; uid: string; role: string }[];
-    } | null;
-  } | null>(null);
+  // selected friend objects for slots 1-3 (index matches players[1..3])
+  const [selectedFriends, setSelectedFriends] = useState<(FriendOption | null)[]>([null, null, null]);
+  const [friends, setFriends] = useState<FriendOption[]>([]);
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState<{
     registration_id: number;
     team_id?: number;
@@ -39,24 +124,25 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
 
   useEffect(() => {
     let active = true;
-    setTeamLoading(true);
 
-    // Fetch user's squad
-    api<{ in_squad: boolean; squad: any }>("squads/me/")
-      .then(res => {
+    // Load friend list for picker
+    api<{ id: number; friend: { username: string; player_id: string; photo: string | null; game_account: { uid: string; ign: string } | null } }[]>("friends/")
+      .then((data) => {
         if (!active) return;
-        setSquadInfo(res);
-        if (res.in_squad && res.squad) {
-          setName(prev => prev || res.squad.name);
-          if (res.squad.members && res.squad.members.length > 0) {
-            const memberIds = res.squad.members.map((m: any) => m.player_id || m.uid);
-            while (memberIds.length < 4) memberIds.push("");
-            setPlayers(memberIds);
-          }
-        }
+        setFriends(
+          data.map((entry) => ({
+            id: entry.friend ? entry.id : 0,
+            username: entry.friend?.username ?? "",
+            ign: entry.friend?.game_account?.ign ?? entry.friend?.username ?? "",
+            uid: entry.friend?.game_account?.uid ?? "",
+            player_id: entry.friend?.player_id ?? "",
+            photo: entry.friend?.photo ?? null,
+          })).filter((f) => f.uid || f.player_id)
+        );
       })
       .catch(() => {});
 
+    // Check for existing registration
     api<
       {
         id: number;
@@ -70,7 +156,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
         invite_tokens: { uid: string; token: string }[];
       }[]
     >(`teams/?tournament=${tournament.id}`)
-      .then(teams => {
+      .then((teams) => {
         const team = teams[0];
         if (!active || !team) return;
         setName(team.name);
@@ -96,13 +182,45 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
       .finally(() => {
         if (active) setTeamLoading(false);
       });
+
     return () => {
       active = false;
     };
   }, [captain, tournament.id]);
 
-  const updatePlayer = (index: number) => (event: ChangeEvent<HTMLInputElement>) =>
-    setPlayers(players.map((player, current) => (current === index ? event.target.value.toUpperCase() : player)));
+  const updatePlayer = (index: number) => (event: ChangeEvent<HTMLInputElement>) => {
+    const val = event.target.value.toUpperCase();
+    setPlayers(players.map((p, i) => (i === index ? val : p)));
+    // Clear selected friend if manually typing
+    if (index > 0) {
+      setSelectedFriends((prev) => {
+        const next = [...prev];
+        next[index - 1] = null;
+        return next;
+      });
+    }
+  };
+
+  const pickFriend = (slot: number, friend: FriendOption) => {
+    // Fill slot with friend's uid (preferred) or player_id
+    const val = friend.uid || friend.player_id;
+    setPlayers(players.map((p, i) => (i === slot ? val : p)));
+    setSelectedFriends((prev) => {
+      const next = [...prev];
+      next[slot - 1] = friend;
+      return next;
+    });
+    setPickerSlot(null);
+  };
+
+  const clearSlot = (slot: number) => {
+    setPlayers(players.map((p, i) => (i === slot ? "" : p)));
+    setSelectedFriends((prev) => {
+      const next = [...prev];
+      next[slot - 1] = null;
+      return next;
+    });
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -115,7 +233,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
           body: JSON.stringify({
             tournament: tournament.id,
             name: name.trim(),
-            members: players.filter(Boolean).map(player_id => ({ player_id: player_id.trim() })),
+            members: players.filter(Boolean).map((player_id) => ({ player_id: player_id.trim() })),
           }),
         })
       );
@@ -154,7 +272,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
         method: "PATCH",
         body: JSON.stringify({
           name,
-          members: players.filter(Boolean).map(player_id => ({ player_id })),
+          members: players.filter(Boolean).map((player_id) => ({ player_id })),
         }),
       });
       setEditing(false);
@@ -166,7 +284,8 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
   };
 
   const retract = async () => {
-    if (!submitted?.team_id || !window.confirm("Send a cancellation request for this team? An admin must approve it.")) return;
+    if (!submitted?.team_id || !window.confirm("Send a cancellation request for this team? An admin must approve it."))
+      return;
     setLoading(true);
     setError("");
     try {
@@ -201,7 +320,7 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
               <input
                 required
                 value={name}
-                onChange={event => setName(event.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Team name"
                 className="neo-input mt-1"
               />
@@ -300,7 +419,10 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
               {submitted.demo_status ? (
                 <div className="mt-4 border-2 border-black bg-[#C6F36B] p-3 text-sm font-black text-black flex items-center gap-2">
                   <ShieldCheck size={18} strokeWidth={3} />
-                  Payment Recorded · {submitted.demo_slot ? `Slot ${String(submitted.demo_slot).padStart(2, "0")} allocated` : "ready for organiser review"}
+                  Payment Recorded ·{" "}
+                  {submitted.demo_slot
+                    ? `Slot ${String(submitted.demo_slot).padStart(2, "0")} allocated`
+                    : "ready for organiser review"}
                 </div>
               ) : (
                 <button
@@ -319,8 +441,8 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
     );
   }
 
-  const isSquadIncomplete = Boolean(squadInfo?.in_squad && squadInfo.squad && squadInfo.squad.member_count < 4);
-  const isSquadNotCaptain = Boolean(squadInfo?.in_squad && squadInfo.squad && !squadInfo.squad.is_captain);
+  // Slots 1-3: teammate pickers
+  const slotLabels = ["Player 2 (Teammate)", "Player 3 (Teammate)", "Player 4 (Teammate)"];
 
   return (
     <form onSubmit={submit} className="neo p-6 sm:p-8">
@@ -336,36 +458,8 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
         </div>
       </div>
 
-      {/* Squad Status Card */}
-      {squadInfo?.in_squad && squadInfo.squad && (
-        <div className="mb-5 border-[3px] border-black bg-[#C6F36B] p-4 text-black shadow-[4px_4px_0px_#000000]">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider bg-black text-[#C6F36B] px-2 py-0.5">
-                REGISTERING WITH SQUAD
-              </span>
-              <h3 className="text-lg font-black uppercase mt-1">{squadInfo.squad.name}</h3>
-            </div>
-            <span className="border-2 border-black bg-white px-2.5 py-1 font-mono text-xs font-black">
-              {squadInfo.squad.squad_id}
-            </span>
-          </div>
-
-          {isSquadNotCaptain && (
-            <div className="mt-3 border-2 border-black bg-[#FFE600] p-2.5 text-xs font-black uppercase text-black">
-              Only your Squad Captain ({squadInfo.squad.captain_username}) can submit tournament registration.
-            </div>
-          )}
-
-          {isSquadIncomplete && (
-            <div className="mt-3 border-2 border-black bg-[#FF4757] p-2.5 text-xs font-black uppercase text-white">
-              A squad must have exactly 4 players before tournament registration. Currently: {squadInfo.squad.member_count}/4 players. Please invite friends in My Squad to complete your roster.
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="space-y-4">
+        {/* Squad/Team Name */}
         <div>
           <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
             Squad / Team Name *
@@ -373,35 +467,121 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
           <input
             required
             value={name}
-            onChange={event => setName(event.target.value)}
+            onChange={(event) => setName(event.target.value)}
             placeholder="e.g. Total Gaming, Team Elite"
             className="neo-input"
           />
         </div>
 
+        {/* Team Members */}
         <div>
           <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-black dark:text-white">
             Team Members (4 Players)
           </label>
           <div className="space-y-2.5">
-            {players.map((player, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#252836] text-xs font-black text-black dark:text-white">
-                  {index + 1}
-                </span>
-                <input
-                  required
-                  readOnly={index === 0 && Boolean(squadInfo?.in_squad)}
-                  value={player}
-                  onChange={updatePlayer(index)}
-                  placeholder={index === 0 ? "Captain Player ID" : `Player ${index + 1} Free Fire UID or Player ID`}
-                  className={`neo-input ${index === 0 && squadInfo?.in_squad ? "bg-[#F4EFE6] dark:bg-[#252836] font-black" : ""}`}
-                />
+            {/* Slot 1: Captain (locked) */}
+            <div className="flex items-center gap-2">
+              <span className="grid h-10 w-10 shrink-0 place-items-center border-2 border-black dark:border-white/20 bg-[#C6F36B] text-xs font-black text-black">
+                1
+              </span>
+              <div className="flex-1 relative">
+                <div className="neo-input flex items-center gap-2 bg-[#F4EFE6] dark:bg-[#252836] cursor-not-allowed">
+                  <ShieldCheck size={14} strokeWidth={2.5} className="shrink-0 text-black/50 dark:text-white/50" />
+                  <span className="flex-1 text-sm font-black text-black dark:text-white truncate">
+                    {profile.user.first_name || profile.user.username}
+                    {captainUid && (
+                      <span className="ml-2 text-xs font-semibold text-black/50 dark:text-white/40">
+                        UID {captainUid}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 border border-black bg-black px-1.5 py-0.5 text-[9px] font-black uppercase text-[#C6F36B]">
+                    CAPTAIN
+                  </span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* Slots 2-4: Teammates with friend picker */}
+            {[1, 2, 3].map((slot) => {
+              const friendObj = selectedFriends[slot - 1];
+              const isPickerOpen = pickerSlot === slot;
+              const otherSelected = players.filter((p, i) => i !== slot && i !== 0 && p);
+
+              return (
+                <div key={slot} className="flex items-start gap-2">
+                  <span className="mt-0 grid h-10 w-10 shrink-0 place-items-center border-2 border-black dark:border-white/20 bg-[#F4EFE6] dark:bg-[#252836] text-xs font-black text-black dark:text-white">
+                    {slot + 1}
+                  </span>
+                  <div className="flex-1 relative">
+                    {friendObj ? (
+                      /* Selected friend card */
+                      <div className="flex items-center gap-2 border-2 border-black dark:border-white/20 bg-[#C6F36B]/30 dark:bg-[#2a2d3a] px-3 py-2">
+                        {friendObj.photo ? (
+                          <img
+                            src={friendObj.photo}
+                            alt={friendObj.username}
+                            className="h-7 w-7 shrink-0 border-2 border-black object-cover"
+                          />
+                        ) : (
+                          <DefaultAvatar name={friendObj.username} size="sm" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-black uppercase text-black dark:text-white">{friendObj.ign}</p>
+                          <p className="truncate text-[10px] font-semibold text-black/60 dark:text-white/60">
+                            @{friendObj.username} · UID {friendObj.uid}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => clearSlot(slot)}
+                          className="shrink-0 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white"
+                          aria-label="Remove player"
+                        >
+                          <X size={16} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    ) : (
+                      /* Input + pick friend button */
+                      <div className="flex gap-2">
+                        <input
+                          value={players[slot]}
+                          onChange={updatePlayer(slot)}
+                          placeholder={`${slotLabels[slot - 1]} — Free Fire UID or Player ID`}
+                          className="neo-input flex-1 min-w-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPickerSlot(isPickerOpen ? null : slot)}
+                          className={`shrink-0 border-2 border-black px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors flex items-center gap-1.5 ${
+                            isPickerOpen
+                              ? "bg-[#C6F36B] text-black shadow-[2px_2px_0px_#000000]"
+                              : "bg-white dark:bg-[#1a1c23] text-black dark:text-white hover:bg-[#C6F36B] hover:text-black"
+                          }`}
+                          title="Pick from friends"
+                        >
+                          <Users size={14} strokeWidth={2.5} />
+                          <span className="hidden sm:inline">Friends</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Friend Picker Dropdown */}
+                    {isPickerOpen && (
+                      <FriendPicker
+                        friends={friends}
+                        onSelect={(f) => pickFriend(slot, f)}
+                        onClose={() => setPickerSlot(null)}
+                        exclude={[captain, ...otherSelected]}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <p className="mt-2 text-xs font-semibold text-black/60 dark:text-white/60">
-            All 4 squad members will be officially registered under your squad room slot.
+            Pick teammates from your Friends list or type their Free Fire UID directly. Each tournament can have different players.
           </p>
         </div>
       </div>
@@ -415,16 +595,10 @@ export function RegistrationPanel({ tournament, profile }: { tournament: Tournam
 
       <button
         type="submit"
-        disabled={loading || isSquadIncomplete || isSquadNotCaptain}
+        disabled={loading}
         className="neo-solid mt-6 min-h-14 w-full text-sm uppercase tracking-wider text-black disabled:opacity-60"
       >
-        {loading
-          ? "Submitting Squad..."
-          : isSquadIncomplete
-          ? "Incomplete Squad (Need 4 Players)"
-          : isSquadNotCaptain
-          ? "Captain Only Registration"
-          : "Submit Squad & Proceed to Slot Confirmation"}
+        {loading ? "Submitting Squad..." : "Submit Squad & Proceed to Slot Confirmation"}
       </button>
     </form>
   );
